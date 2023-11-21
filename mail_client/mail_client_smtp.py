@@ -66,3 +66,50 @@ if recv5[:3] != '221':
 	print('221 reply not received from server.')
 
 clientSocket.close()
+
+def draftMail(mailServer):
+    print("To: ")
+    receipient = input()
+    
+    print("CC: ")
+    cc = ''
+    cc = input()
+    
+    print("BCC: ")
+    bcc = ''
+    bcc = input()
+    
+    print("Subject: ")
+    subject = input()
+    
+    print("Content: ")
+    content = input()
+    
+    print("Attachment? (1 - yes / 0 - no): ")
+    hasAttachment = input()
+    
+    files = []
+    if (hasAttachment == 1):
+       while TRUE:
+           print("filePath (\"/close\" to exit): ")
+           path = input()
+           
+           if (path == "/close"):
+               break
+
+           if os.path.exists(path):
+               files.append(path)
+           else:
+               continue
+    
+    sendMail(receipient, cc, bcc, subject, content, files)
+  
+def sendMail(receipient, cc, bcc, subject, content, files):
+    print("do things")  
+    #to do: send mail to the server, send file by reading it and send by chunks / any alternitive is fine
+    #e.g:
+    #   with open(filePath, 'rb') as file:
+    #   data = file.read(1024)
+    #   while data:
+    #      client_socket.send(data)
+    #      data = file.read(1024)   
