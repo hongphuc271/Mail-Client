@@ -1,3 +1,5 @@
+#from os import *
+import os.path
 from socket import *
 from typing import List
 from os.path import basename
@@ -11,6 +13,47 @@ def initiate(address : tuple) -> socket:
 	clientSocket.connect(address)
 	clientSocket.recv(1024)
 	return clientSocket
+
+def draftMail(clientSocket, userMail):
+    receipient = input("To: ")
+    
+    cc = []
+    cc.append(input("CC (nhan enter ma khong nhap de thoat): "))
+    while cc[-1] != '': #if last != '' : continue, else quit
+        cc.append(input())
+    cc.pop()
+
+    bcc = []
+    bcc.append(input("BCC (nhan enter ma khong nhap de thoat): "))
+    while bcc[-1] != '':
+        bcc.append(input())
+    bcc.pop()
+    
+    subject = input("Subject: ")
+   
+    content = input("Content: ")
+    
+    hasAttachment = input("Attachment? (1 - yes / 0 - no): ")
+    
+    files = []
+    if (hasAttachment == '1'):
+       print("filePath (\"/close\" to exit): ")
+       while True: 
+           path = input()
+           
+           if (path == "/close"):
+               break
+
+           if os.path.isfile(path):
+               print("valid file")
+               files.append(path)
+           else:
+               continue
+    
+    sendMail(clientSocket,	userMail, receipient, cc, bcc, subject, content, attachmentPaths = files)
+
+
+
 
 def sendMail(clientSocket : socket, fromUser : str, toUser : str, ccUsers : List[str], bccUsers : List[str], subject : str, message : str, attachmentPaths : List[str] = []):
 	heloCommand : str = 'HELO ' + clientSocket.getsockname()[0] + '\r\n'

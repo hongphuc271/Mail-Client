@@ -9,12 +9,15 @@ mailserver : tuple = ("127.0.0.1", 2225)
 clientSocket : socket = initiate(mailserver)
 usermail : str = 'sender@test.net'
 
-message : str = 'I love computer networking, too!'
-sendMail(clientSocket, usermail, ' person1@test.net',
-		 [],
-		 [],
-		 'Hello there!',
-		 message,
-		 ['C:/Users/Admin/Desktop/puppy.jpg']
-		 )
+draftMail(clientSocket, usermail)
+
+
+#message : str = 'I love computer networking, too!'
+#sendMail(clientSocket, usermail, ' person1@test.net',
+#		 [],
+#		 [],
+#		 'Hello there!',
+#		 message,
+#		 ['C:/Users/Admin/Desktop/puppy.jpg']
+#		 )
 

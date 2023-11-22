@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>c4fd515f-93c2-4a9f-bb2a-46a1985df46f</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>mail_client_smtp.py</StartupFile>
+    <StartupFile>mail_client_smtp_main.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
