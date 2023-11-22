@@ -32,7 +32,7 @@ if recv2[:3] != '250':
 	print('250 reply not received from server.')
 
 # Send RCPT TO command and print server response.
-rcptToCommand = 'RCPT TO: test@client.net\r\n'
+rcptToCommand = 'RCPT TO: person1@test.net\r\n'
 clientSocket.send(rcptToCommand.encode())
 recv2 = clientSocket.recv(1024).decode()
 print(recv2)
