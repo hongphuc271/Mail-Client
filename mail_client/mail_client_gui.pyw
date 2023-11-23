@@ -7,8 +7,6 @@ def browse_file(file_paths : List[str]):
     path = filedialog.askopenfilename(initialdir="/", title="Select File", filetypes=(("Text files", "*.txt"), ("All files", "*.*"))) 
     if file_paths.count(path) == 0:
       file_paths.append(path)
-    print(file_paths)
-
     # Hiện tên file được chọn
     f_paths_str = ','.join(basename(f) for f in file_paths)
     tk.Label(window, text = " Selected files: %s" % f_paths_str).grid(row = 10, column = 1, sticky="w")
