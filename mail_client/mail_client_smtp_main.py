@@ -10,11 +10,11 @@ clientSocket : socket = initiate(mailserver)
 usermail : str = 'sender@test.net'
 
 message : str = 'I love computer networking, too!'
-sendMail(clientSocket, usermail, ' person1@test.net',
-		 [],
-		 [],
+sendMail(clientSocket, usermail, 'person1@test.net',
+		 '',
+		 '',
 		 'Hello there!',
 		 message,
-		 ['C:/Users/Admin/Desktop/puppy.jpg']
+		 ['C:/Users/Admin/Desktop/cat.jpg']
 		 )
 

@@ -6,48 +6,63 @@ from email.mime.application import MIMEApplication
 from email.mime.text import MIMEText
 from email.utils import formatdate
 
+# sender@test.net
+# person1@test.net
+
 def initiate(address : tuple) -> socket:
-	clientSocket = socket(AF_INET, SOCK_STREAM)
-	clientSocket.connect(address)
-	clientSocket.recv(1024)
-	return clientSocket
+	client_socket = socket(AF_INET, SOCK_STREAM)
+	client_socket.connect(address)
+	client_socket.recv(1024)
+	return client_socket
 
-def sendMail(clientSocket : socket, fromUser : str, toUser : str, ccUsers : List[str], bccUsers : List[str], subject : str, message : str, attachmentPaths : List[str] = []):
-	heloCommand : str = 'HELO ' + clientSocket.getsockname()[0] + '\r\n'
-	clientSocket.send(heloCommand.encode())
-	clientSocket.recv(1024)
+def send_mail(client_socket : socket, from_user : str, to_user : str, cc_users : str, bcc_users : str, subject : str, message : str, attachment_paths : List[str] = []):
+	helo_command : str = 'HELO ' + client_socket.getsockname()[0] + '\r\n'
+	client_socket.send(helo_command.encode())
+	client_socket.recv(1024)
 
-	mailFromCommand : str = 'MAIL FROM: %s\r\n' % fromUser
-	clientSocket.send(mailFromCommand.encode())
-	clientSocket.recv(1024)
+	mailfrom_command : str = 'MAIL FROM: %s\r\n' % from_user
+	client_socket.send(mailfrom_command.encode())
+	client_socket.recv(1024)
 
-	rcptToCommand : str = 'RCPT TO: %s\r\n' % toUser
-	clientSocket.send(rcptToCommand.encode())
-	clientSocket.recv(1024)
+	rcptto_command : str = 'RCPT TO: %s\r\n' % to_user
+	client_socket.send(rcptto_command.encode())
+	client_socket.recv(1024)
+
+	for ucc in cc_users.split(','):
+		cc_rcptto_command : str = 'RCPT TO: %s\r\n' % ucc
+		client_socket.send(cc_rcptto_command.encode())
+		client_socket.recv(1024)
+
+	for ubcc in bcc_users.split(','):
+		bcc_rcptto_command : str = 'RCPT TO: %s\r\n' % ubcc
+		client_socket.send(bcc_rcptto_command.encode())
+		client_socket.recv(1024)
 	
-	dataCommand = 'DATA\r\n'
-	clientSocket.send(dataCommand.encode())
-	clientSocket.recv(1024)
+	data_command = 'DATA\r\n'
+	client_socket.send(data_command.encode())
+	client_socket.recv(1024)
 
+	#Refs: https://stackoverflow.com/questions/3362600/how-to-send-email-attachments
 	msg = MIMEMultipart()
-	msg['From'] = fromUser
-	msg['To'] = toUser
+	msg['From'] = from_user
+	msg['To'] = to_user
 	msg['Date'] = formatdate(localtime=True)
 	msg['Subject'] = subject
+	msg['Cc'] = cc_users
+	msg['Bcc'] = bcc_users
 
 	msg.attach(MIMEText(message))
 
-	for f in attachmentPaths or []:
-		with open(f, "rb") as fil:
-			part = MIMEApplication(
-                fil.read(),
-                Name=basename(f)
-            )
-		# After the file is closed
+	for f in attachment_paths or []:
+		with open(f, 'rb') as fil:
+			fil = open(f, "rb")
+			part = MIMEApplication(fil.read(), Name=basename(f))
 		part['Content-Disposition'] = 'attachment; filename="%s"' % basename(f)
 		msg.attach(part)
 
-	clientSocket.send(msg.as_string().encode())
-	endMessage = '\r\n.\r\n'
-	clientSocket.send(endMessage.encode())
-	clientSocket.recv(1024)
+	client_socket.send(msg.as_string().encode())
+	####
+
+	end_message = '\r\n.\r\n'
+	client_socket.send(end_message.encode())
+	client_socket.recv(1024)
