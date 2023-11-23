@@ -11,7 +11,6 @@ def browse_file(file_paths : List[str]):
 
     # Hiện tên file được chọn
     f_paths_str = ','.join(basename(f) for f in file_paths)
-    print(f_paths)
     tk.Label(window, text = " Selected files: %s" % f_paths_str).grid(row = 10, column = 1, sticky="w")
 
 # Tạo socket và thiết lập lết nối tới mailsever
