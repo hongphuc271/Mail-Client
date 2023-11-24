@@ -24,7 +24,6 @@
     <Compile Include="mail_client_gui.pyw">
       <Publish>False</Publish>
     </Compile>
-    <Compile Include="mail_client_gui_func.py" />
     <Compile Include="mail_client_pop3.py">
       <SubType>Code</SubType>
     </Compile>
