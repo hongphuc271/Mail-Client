@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>c4fd515f-93c2-4a9f-bb2a-46a1985df46f</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>mail_client_smpt_gui.pyw</StartupFile>
+    <StartupFile>mail_client_pop3_gui.pyw</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
