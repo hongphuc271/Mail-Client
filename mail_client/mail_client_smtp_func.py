@@ -1,3 +1,5 @@
+#from os import *
+import os.path
 from socket import *
 from typing import List
 from os.path import basename
@@ -10,33 +12,65 @@ from email.utils import formatdate
 # person1@test.net
 
 def initiate(address : tuple) -> socket:
-	client_socket = socket(AF_INET, SOCK_STREAM)
-	client_socket.connect(address)
-	client_socket.recv(1024)
-	return client_socket
+	clientSocket = socket(AF_INET, SOCK_STREAM)
+	clientSocket.connect(address)
+	clientSocket.recv(1024)
+	return clientSocket
 
-def send_mail(client_socket : socket, from_user : str, to_user : str, cc_users : str, bcc_users : str, subject : str, message : str, attachment_paths : List[str] = []):
-	helo_command : str = 'HELO ' + client_socket.getsockname()[0] + '\r\n'
-	client_socket.send(helo_command.encode())
-	client_socket.recv(1024)
+def draftMail(clientSocket, userMail):
+    receipient = input("To: ")
+    
+    cc = []
+    cc.append(input("CC (nhan enter ma khong nhap de thoat): "))
+    while cc[-1] != '': #if last != '' : continue, else quit
+        cc.append(input())
+    cc.pop()
 
-	mailfrom_command : str = 'MAIL FROM: %s\r\n' % from_user
-	client_socket.send(mailfrom_command.encode())
-	client_socket.recv(1024)
+    bcc = []
+    bcc.append(input("BCC (nhan enter ma khong nhap de thoat): "))
+    while bcc[-1] != '':
+        bcc.append(input())
+    bcc.pop()
+    
+    subject = input("Subject: ")
+   
+    content = input("Content: ")
+    
+    hasAttachment = input("Attachment? (1 - yes / 0 - no): ")
+    
+    files = []
+    if (hasAttachment == '1'):
+       print("filePath (\"/close\" to exit): ")
+       while True: 
+           path = input()
+           
+           if (path == "/close"):
+               break
 
-	rcptto_command : str = 'RCPT TO: %s\r\n' % to_user
-	client_socket.send(rcptto_command.encode())
-	client_socket.recv(1024)
+           if os.path.isfile(path):
+               print("valid file")
+               files.append(path)
+           else:
+               continue
+    
+    sendMail(clientSocket,	userMail, receipient, cc, bcc, subject, content, attachmentPaths = files)
 
-	for ucc in cc_users.split(','):
-		cc_rcptto_command : str = 'RCPT TO: %s\r\n' % ucc
-		client_socket.send(cc_rcptto_command.encode())
-		client_socket.recv(1024)
 
-	for ubcc in bcc_users.split(','):
-		bcc_rcptto_command : str = 'RCPT TO: %s\r\n' % ubcc
-		client_socket.send(bcc_rcptto_command.encode())
-		client_socket.recv(1024)
+
+
+def sendMail(clientSocket : socket, fromUser : str, toUser : str, ccUsers : List[str], bccUsers : List[str], subject : str, message : str, attachmentPaths : List[str] = []):
+	heloCommand : str = 'HELO ' + clientSocket.getsockname()[0] + '\r\n'
+	clientSocket.send(heloCommand.encode())
+	clientSocket.recv(1024)
+
+	mailFromCommand : str = 'MAIL FROM: %s\r\n' % fromUser
+	clientSocket.send(mailFromCommand.encode())
+	clientSocket.recv(1024)
+
+	rcptToCommand : str = 'RCPT TO: %s\r\n' % toUser
+	clientSocket.send(rcptToCommand.encode())
+	clientSocket.recv(1024)
+
 	
 	data_command = 'DATA\r\n'
 	client_socket.send(data_command.encode())

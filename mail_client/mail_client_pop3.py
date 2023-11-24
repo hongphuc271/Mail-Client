@@ -14,7 +14,7 @@ recv = clientSocket.recv(1024).decode()
 print(recv)
 
 #Create account
-userCommand = "USER test@client.net\r\n"
+userCommand = "USER person1@test.net\r\n"
 clientSocket.send(userCommand.encode())
 
 recv1 = clientSocket.recv(1024).decode()

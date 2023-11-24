@@ -4,7 +4,6 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>c4fd515f-93c2-4a9f-bb2a-46a1985df46f</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>mail_client_gui.pyw</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -27,6 +26,7 @@
     <Compile Include="mail_client_pop3.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="mail_client_pop3_func.py" />
     <Compile Include="mail_client_smtp.py" />
     <Compile Include="mail_client_smtp_func.py">
       <SubType>Code</SubType>
