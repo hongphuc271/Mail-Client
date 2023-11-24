@@ -1,7 +1,4 @@
 from socket import *
-msg = "\r\n I love computer networks!"
-endmsg = "\r\n.\r\n"
-
 # Choose a mail server (e.g. Google mail server) and call it mailserver
 mailserver = ("127.0.0.1", 3335)
 
