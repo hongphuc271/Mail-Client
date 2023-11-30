@@ -15,7 +15,7 @@ def login(clientSocket: socket, usermail: str, password: str) -> str:
     return usermail
    
 def getMailList(clientSocket: socket):
-    statCommand = "STAT \r\n"
+    statCommand = "STAT\r\n"
     clientSocket.send(statCommand.encode())
     mailbox = clientSocket.recv(1024).decode()
     
@@ -24,11 +24,12 @@ def getMailList(clientSocket: socket):
         mailCount = int(mailbox.split()[1])
         for i in range(1, mailCount + 1):
             mails.append(getMail(clientSocket, i))
+            print(getMail(clientSocket, i) + "\n")
     return mails
         
            
 def getMail(clientSocket: socket, index: int):
-    lineNumber: int = 1
+    lineNumber: int = 0
     topCommand: str = "TOP %d %d\r\n" % (index, lineNumber)
     clientSocket.send(topCommand.encode())
         
@@ -43,7 +44,6 @@ def retrieveMail(clientSocket: socket, mailId: int):
 
     recv = clientSocket.recv(1024).decode()
     print(recv)
-    input("nhan enter de tiep tuc:")
     
 def deleteMail(clientSocket: socket, mailId: int):
     deleCommand = "DELE 1\r\n"

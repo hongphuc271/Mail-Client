@@ -12,18 +12,5 @@ pop3Mailserver : tuple = ("127.0.0.1", 3335)
 
 smtpClientSocket : socket = initiate(smtpMailserver)
 pop3ClientSocket : socket = initiate(pop3Mailserver)
-#usermail : str = 'sender@test.net'
-
-usermail : str = "user@test.net"
-
 app(smtpClientSocket, pop3ClientSocket)
-
-#message : str = 'I love computer networking, too!'
-#sendMail(clientSocket, usermail, ' person1@test.net',
-#		 [],
-#		 [],
-#		 'Hello there!',
-#		 message,
-#		 ['C:/Users/Admin/Desktop/puppy.jpg']
-#		 )
 
