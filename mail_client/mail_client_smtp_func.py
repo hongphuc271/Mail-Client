@@ -94,3 +94,4 @@ def sendMail(clientSocket : socket, fromUser : str, toUser : str, ccUsers : List
 	endMessage = '\r\n.\r\n'
 	clientSocket.send(endMessage.encode())
 	clientSocket.recv(1024)
+    

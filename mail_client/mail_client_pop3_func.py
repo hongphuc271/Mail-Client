@@ -2,13 +2,11 @@
 from distutils.command import clean
 from socket import *
 
-def login(clientSocket: socket) -> str:
-    usermail: str = input("Nhap ten nguoi dung")
+def login(clientSocket: socket, usermail: str, password: str) -> str:
     userCommand: str = "USER %s\r\n" %usermail
     clientSocket.send(userCommand.encode())
     clientSocket.recv(1024)
     
-    password: str = input("Nhap mat khau nguoi dung")
     passCommand = "PASS %s\r\n" %password
     clientSocket.send(passCommand.encode())
     clientSocket.recv(1024)
@@ -16,25 +14,27 @@ def login(clientSocket: socket) -> str:
     print("Dang nhap thanh cong")
     return usermail
    
-def printMailList(clientSocket: socket):
+def getMailList(clientSocket: socket):
     statCommand = "STAT \r\n"
     clientSocket.send(statCommand.encode())
     mailbox = clientSocket.recv(1024).decode()
     
+    mails = []
     if mailbox.startswith('+OK'):
         mailCount = int(mailbox.split()[1])
         for i in range(1, mailCount + 1):
-            printMail(clientSocket, i)
+            mails.append(getMail(clientSocket, i))
+    return mails
         
            
-def printMail(clientSocket: socket, index: int):
+def getMail(clientSocket: socket, index: int):
     lineNumber: int = 1
     topCommand: str = "TOP %d %d\r\n" % (index, lineNumber)
     clientSocket.send(topCommand.encode())
         
     mail = clientSocket.recv(1024).decode()
     if mail.startswith("+OK"):
-        print(mail[3:])
+        return(mail[3:])
     
 
 def retrieveMail(clientSocket: socket, mailId: int):

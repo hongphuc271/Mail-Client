@@ -21,6 +21,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="mail_client_gui_functions.py" />
     <Compile Include="mail_client_pop3.py">
       <SubType>Code</SubType>
     </Compile>
