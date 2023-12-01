@@ -38,12 +38,19 @@ def getMail(clientSocket: socket, index: int):
         return(mail[3:])
     
 
-def retrieveMail(clientSocket: socket, mailId: int):
+def retrieveMail(clientSocket: socket, mailId: int): 
     retrCommand = "RETR %d\r\n" %mailId
     clientSocket.send(retrCommand.encode())
 
-    recv = clientSocket.recv(1024).decode()
-    print(recv)
+    response = b""
+    while True:
+        chunk = clientSocket.recv(1024)
+        response += chunk
+        if b"\r\n.\r\n" in response:
+            break
+
+    print(response.decode())
+    return response.decode()
     
 def deleteMail(clientSocket: socket, mailId: int):
     deleCommand = "DELE 1\r\n"

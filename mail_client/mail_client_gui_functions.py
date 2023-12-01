@@ -32,6 +32,8 @@ def app(smtpSocket, pop3Socket):
     
     newMailButton = tk.Button(sideBar, text = "+ New Mail", command = lambda: { draft(emptySpace, smtpSocket), emptySpace.grid(row = 0, column= 2) }, height = 2, bd =2, bg="#90e0ef", padx= 115, cursor="plus")
     newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 1, sticky= "NW")
+    newMailButton.bind("<Enter>", on_enter_blue)
+    newMailButton.bind("<Leave>", on_leave_blue)
     
     mailbox = tk.Frame(sideBar, bg= "#bfc2c9", height= 400, width= 300)
     mailbox.grid(row = 1, rowspan= 9, column= 0, sticky= "W")   
@@ -40,10 +42,12 @@ def app(smtpSocket, pop3Socket):
 
     refreshButton = tk.Button(mailbox, text = "get mail", command = lambda: inbox(mailbox, pop3Socket, emptySpace), height = 2, bd =2, bg="#90e0ef", padx= 124, cursor= "exchange")
     refreshButton.grid(row= 0, rowspan = 1, column = 0, columnspan = 1, sticky= "NW")
+    refreshButton.bind("<Enter>", on_enter_blue)
+    refreshButton.bind("<Leave>", on_leave_blue)
     
     #lấy mail từ pop3 và viết nó vào mailbox
     
-    #inbox(mailbox, pop3Socket, emptySpace)
+    inbox(mailbox, pop3Socket, emptySpace)
     
     sideBar.grid(row=0 ,column= 0, ipadx= 2)
     sideBar.grid_rowconfigure(0, weight=1)
@@ -81,14 +85,16 @@ def inbox(window, pop3Socket, mts):
             elif chunk.startswith("Subject:"):
                 SUBJECT = chunk[8:]
 
-        item = tk.Frame(window, width= 296, height= 50, padx= 2, bg= "#fff", cursor = "hand2")
+        item = tk.Frame(window, width= 296, height= 50, padx= 2, bg= "#fff", cursor = "hand2", bd =2 )
         item.grid_propagate(False);
         item.update_idletasks()
         tk.Label(item, text = FROM, foreground = "#230f94", bg ="#fff", font=("sans-serif", 8, "bold")).grid(row = 0, column = 0, sticky = "nw")
         tk.Label(item, text = SUBJECT, bg ="#fff").grid(row = 1, column = 0, sticky = "nw")
         
-        item.grid(row = i, column = 0, sticky = "N")
-        item.bind("<Button-1>", lambda mts=mts, index=i, pop3Socket=pop3Socket: readMail(mts, index, pop3Socket))
+        item.grid(row = i, column = 0, sticky = "N", ipady= 2)
+        item.bind("<Button-1>", lambda event ,mts=mts, index=i, pop3Socket=pop3Socket: { readMail(event, mts, index, pop3Socket), showMTSpace(mts) })
+        item.bind("<Enter>", on_enter_white)
+        item.bind("<Leave>", on_leave_white)
         i = i + 1
         
        
@@ -97,19 +103,20 @@ def inbox(window, pop3Socket, mts):
 
     #   misc: inbox scollable khi overflow
 
-def readMail(window, mailId: int, pop3Socket):
+def readMail(event ,window, mailId: int, pop3Socket): 
     # TODO:
     #   1.Lấy id từ mail được chọn
     #   2.Lấy mail từ id
     #   3.In ra mail trong emptySpace (window)
     #   4.Có nút để thoát
-
+    destroy_all_widgets(window)
     mail = retrieveMail(pop3Socket, mailId)
     tk.Label(window, text = mail).grid(row = 0, column = 0, sticky = "NW")
     cancel_button = tk.Button(window, text = "Cancel", command=lambda: destroy_all_widgets(window))
     cancel_button.grid(row =2, column= 0, pady = 10)
 
 def draft(window, client_socket):
+    destroy_all_widgets(window)
     # Tạo các nhãn và ô chỉnh sửa
     tk.Label(window, text="From:").grid(row=0, column=0, sticky="e")
     from_entry = tk.Entry(window)
@@ -159,5 +166,19 @@ def draft(window, client_socket):
     cancel_button = tk.Button(window, text = "Cancel", command=lambda: destroy_all_widgets(window))
     cancel_button.grid(row =12, column= 2, pady = 10)
 
+def on_enter_blue(event):
+    event.widget.config(bg="#029fba")  
 
+def on_leave_blue(event):
+    event.widget.config(bg="#90e0ef") 
+    
+def on_enter_white(event):
+    for widget in event.widget.winfo_children():
+        widget.config(bg="#c2cdcf")
+    event.widget.config(bg="#c2cdcf")
 
+def on_leave_white(event):
+    for widget in event.widget.winfo_children():
+        widget.config(bg="#fff")
+    event.widget.config(bg="#fff")  
+    
