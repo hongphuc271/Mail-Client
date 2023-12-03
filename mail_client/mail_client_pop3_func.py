@@ -107,6 +107,7 @@ def save_all_mails(mails : dict, folder_path : str):
             fil.write(';'.join(m.tags) + "\n")
             fil.write(m.message_as_string)
             print("Saved " + path)
+        write_attachments_to_files(m.message_as_string, folder_path + "/files/" + m.uidl)
 
 def load_all_mails(mails : dict, folder_path : str):
     if not os.path.exists(folder_path):
@@ -115,10 +116,23 @@ def load_all_mails(mails : dict, folder_path : str):
     mails.clear()
     for m_path in os.listdir(folder_path):
         path = folder_path + '/' +  m_path
+        if os.path.isdir(path):
+            continue
         with open(path) as fil:
             m_uidl = fil.readline()[:-1]
-            m_tags = fil.readline()[:-1].split(';',)
+            m_tags = fil.readline()[:-1].split(';')
             m_msg = fil.read()
             mails[m_uidl] = MailMessage(m_msg, m_tags, m_uidl)
             print("Loaded " + path)
 
+def write_attachments_to_files(msg_as_string : str, folder_path : str):
+    msg = email.message_from_string(msg_as_string)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    if msg.is_multipart():
+        for part in msg.walk():
+            content_type : str = part.get_content_type()
+            if content_type.startswith("application"):
+               with open(folder_path + "/" + part.get_filename(), 'wb') as fil:
+                   fil.write(part.get_payload(decode=True))
