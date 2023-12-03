@@ -4,6 +4,13 @@ from tkinter import ttk
 import subprocess
 import time
 
+def on_refresh_timer_timeout():
+	get_messages(client_socket, mails, user_info[0])
+	tab_bysender.update_message_display()
+	tab_all.update_message_display()
+	print("Refreshed")
+	root.after(refresh_time, on_refresh_timer_timeout) 
+
 #Chạy mail server
 run_command = "java -jar test-mail-server-1.0.jar -s 2225 -p 3335 -m .test-mail-server/"
 process = subprocess.Popen(run_command, shell=True)
@@ -20,7 +27,7 @@ client_socket : socket = sign_in(mail_server, user_info)
 # Tạo cửa sổ chính
 root = tk.Tk()
 root.title("Two-Pane Interface")
-root.geometry("540x480")
+root.geometry("600x480")
 
 # Tạo đối tượng Notebook để chứa các tab
 notebook = ttk.Notebook(root)
@@ -32,11 +39,13 @@ notebook.add(tab_all, text="User")
 
 load_messages(mails, user_info[0])
 
-#Tạo tab "BySender"
-launch_tab_bysender(client_socket, notebook, mails, user_info)
+if not has_config(".mails"):
+	save_config(".mails", {"refresh_time" : 5})
+refresh_time = int(load_config(".mails")["refresh_time"]) * 1000
 
-# Tạo tab "All"
-launch_tab_all(client_socket, notebook, mails, user_info)
+root.after(refresh_time, on_refresh_timer_timeout)
+tab_bysender = TabBySender(client_socket, notebook, mails, user_info)
+tab_all = TabAll(client_socket, notebook, mails, user_info)
 
 # Bắt đầu vòng lặp sự kiện
 root.mainloop()

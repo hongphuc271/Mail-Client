@@ -3,13 +3,16 @@ from typing import List
 import email
 import time
 import os
+import configparser
+
 
 class MailMessage:
     # Phương thức khởi tạo
-    def __init__(self, message_as_string : str, tags : List[str], uidl : str):
+    def __init__(self, message_as_string : str, tags : List[str], uidl : str, read : bool):
         self.message_as_string : str = message_as_string
         self.tags : List[str] = tags
         self.uidl : str = uidl
+        self.read : bool = read
 
 def sign_in(mail_server : tuple, user_info) -> socket:
 	client_socket : socket = socket(AF_INET, SOCK_STREAM)
@@ -104,10 +107,21 @@ def save_all_mails(mails : dict, folder_path : str):
         path = folder_path + "/" + m.uidl
         with open(path, 'w', newline="") as fil:
             fil.write(m.uidl + "\n")
+            fil.write(("1" if m.read else "0") + "\n")
             fil.write(';'.join(m.tags) + "\n")
             fil.write(m.message_as_string)
             print("Saved " + path)
         write_attachments_to_files(m.message_as_string, folder_path + "/files/" + m.uidl)
+
+def save_changes_to_mail(mail : MailMessage, folder_path : str):
+    path = folder_path + "/" + mail.uidl
+    with open(path, 'w', newline="") as fil:
+        fil.write(mail.uidl + "\n")
+        fil.write(("1" if mail.read else "0") + "\n")
+        fil.write(';'.join(mail.tags) + "\n")
+        fil.write(mail.message_as_string)
+        print("Saved " + path)
+    write_attachments_to_files(mail.message_as_string, folder_path + "/files/" + mail.uidl)
 
 def load_all_mails(mails : dict, folder_path : str):
     if not os.path.exists(folder_path):
@@ -120,9 +134,10 @@ def load_all_mails(mails : dict, folder_path : str):
             continue
         with open(path) as fil:
             m_uidl = fil.readline()[:-1]
+            m_read = fil.readline()[:-1] == "1"
             m_tags = fil.readline()[:-1].split(';')
             m_msg = fil.read()
-            mails[m_uidl] = MailMessage(m_msg, m_tags, m_uidl)
+            mails[m_uidl] = MailMessage(m_msg, m_tags, m_uidl, m_read)
             print("Loaded " + path)
 
 def write_attachments_to_files(msg_as_string : str, folder_path : str):
@@ -136,3 +151,28 @@ def write_attachments_to_files(msg_as_string : str, folder_path : str):
             if content_type.startswith("application"):
                with open(folder_path + "/" + part.get_filename(), 'wb') as fil:
                    fil.write(part.get_payload(decode=True))
+
+def has_config(folder_path : str):
+    return os.path.exists(folder_path + "/config.cfg")
+
+def save_config(folder_path : str, cfg_parameters : dict):
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    
+    config = configparser.ConfigParser()
+
+    # Thêm các giá trị vào file cấu hình
+    config['Settings'] = cfg_parameters
+
+    # Lưu file cấu hình
+    with open(folder_path + "/" + 'config.cfg', 'w') as configfile:
+        config.write(configfile)
+
+def load_config(folder_path : str) -> dict:
+    config = configparser.ConfigParser()
+
+    # Đọc file cấu hình
+    config.read(folder_path + "/" + "config.cfg")
+
+    # Lấy giá trị từ file cấu hình
+    return dict(config["Settings"]).copy()

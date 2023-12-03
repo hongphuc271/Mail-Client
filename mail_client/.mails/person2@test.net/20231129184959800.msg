@@ -1,4 +1,5 @@
 20231129184959800.msg
+0
 sender:person1@test.net
 Content-Type: multipart/mixed; boundary="===============2980343673734990118=="
 MIME-Version: 1.0
