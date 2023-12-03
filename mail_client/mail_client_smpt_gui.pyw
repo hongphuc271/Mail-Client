@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import filedialog
 from mail_client_smtp_func import *
 from typing import List
+import subprocess
+import time
 
 def browse_file(file_paths : List[str]):
     path = filedialog.askopenfilename(initialdir="/", title="Select File", filetypes=(("Text files", "*.txt"), ("All files", "*.*"))) 
@@ -11,6 +13,11 @@ def browse_file(file_paths : List[str]):
     # Hiện tên file được chọn
     f_paths_str = ','.join(basename(f) for f in file_paths)
     tk.Label(window, text = " Selected files: %s" % f_paths_str).grid(row = 10, column = 1, sticky="w")
+
+#Chạy mail server
+run_command = "java -jar test-mail-server-1.0.jar -s 2225 -p 3335 -m .test-mail-server/"
+process = subprocess.Popen(run_command, shell=True)
+time.sleep(2.0)
 
 # Tạo socket và thiết lập lết nối tới mailsever
 mailserver = ("127.0.0.1", 2225)

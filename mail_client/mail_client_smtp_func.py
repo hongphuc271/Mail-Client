@@ -5,6 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 from email.mime.text import MIMEText
 from email.utils import formatdate
+from time import time
 
 # sender@test.net
 # person1@test.net
@@ -50,6 +51,7 @@ def send_mail(client_socket : socket, from_user : str, to_user : str, cc_users :
 	msg['Subject'] = subject
 	msg['Cc'] = cc_users
 	msg['Bcc'] = bcc_users
+	msg['Message-ID'] = str(time()) + "@" + from_user.split("@", 1)[1]
 
 	msg.attach(MIMEText(message))
 
