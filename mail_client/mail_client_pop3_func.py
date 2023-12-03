@@ -1,4 +1,3 @@
-
 from distutils.command import clean
 from socket import *
 
@@ -50,7 +49,7 @@ def retrieveMail(clientSocket: socket, mailId: int):
             break
 
     print(response.decode())
-    return response.decode()
+    return response.decode().split("\r\n", 1)[1]
     
 def deleteMail(clientSocket: socket, mailId: int):
     deleCommand = "DELE 1\r\n"
