@@ -24,17 +24,18 @@ WHITE_DARKEN = "#c2cdcf"
 LIGHTGREY = "#bfc2c9"
 TEXT_HIGHLIGHT = "#230f94" 
 
-mails : dict = {}
+
 
 
 def app(smtpSocket, pop3Socket):
-    user = login(pop3Socket, "inbox@testmail.net", "testpass")
-    get_mail_state = [" log in ", "get mail"]
+    user_name = login(pop3Socket, "inbox@testmail.net", "testpass")
+    mails : dict = {}
+    
     #cửa sổ làm việc chính
     window = tk.Tk()
     window.title("Email Sender")
 
-    window.maxsize(1100,500)
+    window.maxsize(1100,600)
 
     # thanh làm việc chính, chứa nút viết thư và hộp thư
     sideBar = tk.Frame(window, width=300, height=200, bd= 2)
@@ -59,7 +60,7 @@ def app(smtpSocket, pop3Socket):
     inboxTab.grid(row = 1, column = 0, sticky= "nwe")
     trashTab.grid(row = 1, column = 1, sticky= "nwe")
 
-    refreshButton = tk.Button(sideBar, text = get_mail_state[user != "unknown"], command = lambda: {{login(pop3Socket, "inbox@testmail.net", "testpass"), sideBar.update_idletasks() } if user == "unknown" else inbox(mailbox, pop3Socket, emptySpace)}, bd =2, bg=BLUE, padx= 104, pady = 10, cursor= "exchange")
+    refreshButton = tk.Button(sideBar, text = "refresh", command = lambda: { get_messages(pop3Socket, mails, user_name), load_all_mails(mails, ".mails/" + user_name), inbox(mailbox, pop3Socket, emptySpace, mails)}, bd =2, bg=BLUE, padx= 104, pady = 10, cursor= "exchange")
     refreshButton.grid(row= 2, column = 0, columnspan = 1, sticky= "NWE")
     hoverBind(refreshButton, BLUE_DARKEN)
     
@@ -70,7 +71,7 @@ def app(smtpSocket, pop3Socket):
 
     #https://stackoverflow.com/questions/3085696/adding-a-scrollbar-to-a-group-of-widgets-in-tkinter
     mailbox_canvas = tk.Canvas(sideBar, height= 400, width= 300, borderwidth=0)
-    mailbox = tk.Frame(mailbox_canvas, bg= "#bfc2c9", height= 400, width= 300)  
+    mailbox = tk.Listbox(mailbox_canvas, bg= "#bfc2c9", height= 400, width= 300, selectmode=tk.SINGLE)  
     mailScroll = tk.Scrollbar(sideBar, orient="vertical", command= mailbox_canvas.yview)
     
     mailbox_canvas.configure(yscrollcommand = mailScroll.set)
@@ -103,56 +104,59 @@ def destroy_all_widgets(frame):
     frame.grid_forget()
 
         
-def inbox(window, pop3Socket, mts):
-    #TODO:
-    #   1.lấy ra danh sách mail bằng LIST
-    #   2.Lấy title, dòng đầu bằng TOP <id> 1
-    #   3.In ra từ dữ liệu của 2
-    #   4.Lặp lại 2 3 cho đến dkhi hết danh sách mail
+def inbox(window : tk.Frame, pop3Socket : socket, mts : tk.Frame, mails : dict):
     
     #mails = getMailList(pop3Socket)
-    mail_count = get_message_count(pop3Socket)
-    mailItems = []
-    for i in range(1, mail_count + 1):
-        mail = get_message_from_string(retrieve_message_as_string(pop3Socket ,i))
-        
-        item = tk.Frame(window, width= 296, height= 50, padx= 2, bg= WHITE, cursor = "hand2", bd =2 )
+     # Phương thức khởi tạo
+    #def __init__(self, message_as_string : str, tags : List[str], uidl : str, read : bool):
+    #    self.message_as_string : str = message_as_string
+    #    self.tags : List[str] = tags
+    #    self.uidl : str = uidl
+    #    self.read : bool = read
+    
+    destroy_all_widgets(window)
+    i = 0
+    mail_keys = list(mails.keys())
+    for msg_uidl in mail_keys:
+        item = tk.Frame(window, width= 300, height= 50, padx= 2, bg= WHITE, cursor = "hand2", bd =2 )
         item.grid_propagate(False);
         item.update_idletasks()
-        tk.Label(item, text = mail["From"], foreground = TEXT_HIGHLIGHT, bg =WHITE, font=("sans-serif", 8, "bold")).grid(row = 0, column = 0, sticky = "nw")
-        tk.Label(item, text = mail["Subject"], bg =WHITE).grid(row = 1, column = 0, sticky = "nw")
-        item.grid(row = i-1, column = 0, sticky = "N", ipady= 2)
-        item.bind("<Button-1>", lambda event ,mts=mts, index=i, pop3Socket=pop3Socket: { readMail(event, mts, index, pop3Socket), showMTSpace(mts) })
+        tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["From"], foreground = TEXT_HIGHLIGHT, bg =WHITE, font=("sans-serif", 8, "bold")).grid(row = 0, column = 0, sticky = "nw")
+        tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["Subject"], bg =WHITE).grid(row = 1, column = 0, sticky = "nw")
+        item.grid(row = i, column = 0, sticky = "N", ipady= 2)
+        item.bind("<Button-1>", lambda event ,mts=mts, mail = mails[msg_uidl], pop3Socket=pop3Socket: { readMail(event, mts, mail, pop3Socket), showMTSpace(mts) })
         hoverBind(item, WHITE_DARKEN)
-        mailItems.append(item)
+        window.insert(tk.END, item)
+        i = i+1
 
 
-def readMail(event ,window, mailId: int, pop3Socket): 
+def readMail(event ,window, mail: dict, pop3Socket): 
     destroy_all_widgets(window)
-    message_string = retrieve_message_as_string(pop3Socket, mailId)
-    mail = get_message_from_string(message_string)
+    message_string = mail.message_as_string
+    mail_component = get_message_from_string(message_string)
     
     mailparts = ["Date" ,"From", "To", "Cc", "Bcc", "Subject"]
     i = 0
     for part in mailparts:
          tk.Label(window, text = part + ": ", justify="left").grid(row = i, column = 0, sticky = "NW")
-         tk.Label(window, text = mail.get_all(part, []), width= 90, anchor = "w").grid(row = i, column = 1, sticky = "NW")
+         tk.Label(window, text = mail_component[part], width= 90, anchor = "w").grid(row = i, column = 1, sticky = "NW")
          i = i + 1
     
     body = tk.Text(window, bg = WHITE, width = 80, height=18, padx = 24, relief='flat')
     body.grid(row = 6, column = 0, columnspan=2,sticky= "NW")
     
     attachent_count = 0
-    if mail.is_multipart():
-        for part in mail.walk():
+    if mail_component.is_multipart():
+        for part in mail_component.walk():
             content_type : str = part.get_content_type()
             if content_type == "text/plain":
                 body.insert(tk.END, "\n\n" + part.get_payload(decode=True).decode())
             elif content_type.startswith("multipart"):
                 attachent_count += 1
     else:
-        body.insert(tk.END, "\n\n" + mail.get_payload(decode=True).decode())
+        body.insert(tk.END, "\n\n" + mail_component.get_payload(decode=True).decode())
 
+    
     body.configure(state='disabled')
 
     scroll = tk.Scrollbar(window, orient='vertical', command=body.yview)
@@ -161,10 +165,8 @@ def readMail(event ,window, mailId: int, pop3Socket):
 
     cancel_button = tk.Button(window, text = "Cancel", command=lambda: destroy_all_widgets(window))
     cancel_button.grid(row = 7, column= 0, pady = 10)
-
-    download_mail_button = tk.Button(window, text = "download mail", command= lambda: write_attachments_to_files(message_string, "C:/Users/LENOVO/Downloads/"))
-    download_mail_button.grid(row = 7, column = 1, pady = 10)
-    get_attachmentsbutton = tk.Button(window, text = "download mail", command= lambda: write_attachments_to_files(message_string, "C:/Users/LENOVO/Downloads/"))
+    
+    tk.Label(window, text = "there are " + str(attachent_count) + " attachments").grid(row = 7, column = 1)
 
 def draft(window, client_socket):
     destroy_all_widgets(window)
@@ -248,3 +250,23 @@ def browse_file( file_paths : List[str], window):
     # Hiện tên file được chọn
     f_paths_str = ','.join(basename(f) for f in file_paths)
     tk.Label(window, text = " Selected files: %s" % f_paths_str).grid(row = 10, column = 1, sticky="w")
+    
+def get_messages(client_socket : socket, mails : dict, user_name : str):
+    msg_count = get_message_count(client_socket)
+    uidl_list = get_uidl_list(client_socket)
+
+    has_new_messages = False
+
+    for i in range(msg_count):
+        msg_uidl = uidl_list[i]
+        if msg_uidl in mails:
+            continue
+        has_new_messages = True
+        msg_as_string = retrieve_message_as_string(client_socket, i+1)
+        sender = email.message_from_string(msg_as_string)["From"]
+        if sender is None:
+            sender = "Unknown"
+        mails[msg_uidl] = MailMessage(msg_as_string, ["sender:" + sender], msg_uidl, False)
+     
+    if has_new_messages:
+        save_all_mails(mails, ".mails/" + user_name)

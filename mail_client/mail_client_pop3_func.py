@@ -61,7 +61,7 @@ def get_message_count(client_socket : socket) -> int:
     stat = client_socket.recv(1024).decode()
     #print(stat)
     #Ex: +OK 12 1024
-    message_count = int(stat.split(" ", 2)[1])
+    message_count = int(stat.split(" ")[1])
     #print(message_count)
     return message_count
 
