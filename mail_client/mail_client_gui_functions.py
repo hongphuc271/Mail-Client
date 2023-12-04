@@ -11,24 +11,30 @@ from sqlite3 import Row
 from textwrap import wrap
 import tkinter as tk
 from tkinter import filedialog
+from tkinter import ttk
+from tkinter.tix import ComboBox
 from turtle import color
 from mail_client_pop3_func import *
 from mail_client_smtp_func import *
 from typing import List
 
 #color palates
+GOLD = "#fcba03"
+GOLD_DARKEN = "#c9960a"
 BLUE = "#90e0ef"
 WHITE = "#fff"
 BLUE_DARKEN = "#029fba"
 WHITE_DARKEN = "#c2cdcf"
 LIGHTGREY = "#bfc2c9"
 TEXT_HIGHLIGHT = "#230f94" 
+TEXT_READ = "#8c2ce6"
 
 
 
 
-def app(smtpSocket, pop3Socket):
-    user_name = login(pop3Socket, "inbox@testmail.net", "testpass")
+def app(smtp_addr: tuple, pop3_addr: tuple):
+    user = ["inbox@testmail.net", "testpass"]
+    
     mails : dict = {}
     
     #cửa sổ làm việc chính
@@ -48,25 +54,23 @@ def app(smtpSocket, pop3Socket):
     # khung để làm việc với viết thư và đọc thư, mở ra khi các hàm được chọn, có thể tự đóng lại để tiết kiệm chỗ trống
     emptySpace = tk.Frame(window, padx = 20)
     
-    newMailButton = tk.Button(sideBar, text = "+ New Mail", command = lambda: { draft(emptySpace, smtpSocket), emptySpace.grid(row = 0, column= 2) }, bd =2, bg=BLUE, padx= 124, pady = 10, cursor="plus")
-    newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 2, sticky= "NWE")
+    newMailButton = tk.Button(sideBar, text = "+ New Mail", command = lambda: { draft(emptySpace, smtp_addr), emptySpace.grid(row = 0, column= 2) }, bd =2, bg=BLUE, padx= 124, pady = 10, cursor="plus")
+    newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 3, sticky= "NWE")
     hoverBind(newMailButton, BLUE_DARKEN)
-    
-    
-    inboxTab = tk.Button(sideBar, text = "inbox", command= lambda: {}, cursor= "hand2", bg = BLUE, pady= 10)
-    hoverBind(inboxTab, BLUE_DARKEN)
-    trashTab = tk.Button(sideBar, text = "trash", command = lambda: {}, cursor ="hand2", bg = LIGHTGREY, pady= 10)
-    hoverBind(trashTab, WHITE_DARKEN)
-    inboxTab.grid(row = 1, column = 0, sticky= "nwe")
-    trashTab.grid(row = 1, column = 1, sticky= "nwe")
-
-    refreshButton = tk.Button(sideBar, text = "refresh", command = lambda: { get_messages(pop3Socket, mails, user_name), load_all_mails(mails, ".mails/" + user_name), inbox(mailbox, pop3Socket, emptySpace, mails)}, bd =2, bg=BLUE, padx= 104, pady = 10, cursor= "exchange")
-    refreshButton.grid(row= 2, column = 0, columnspan = 1, sticky= "NWE")
+       
+    refreshButton = tk.Button(sideBar, text = "refresh", command = lambda: { get_messages(pop3_addr, mails, user), load_all_mails(mails, ".mails/" + user[0]), inbox(mailbox, emptySpace, mails)}, bd =2, bg=BLUE, padx= 104, pady = 10, cursor= "exchange")
+    refreshButton.grid(row= 1, column = 0, columnspan = 3, sticky= "NWE")
     hoverBind(refreshButton, BLUE_DARKEN)
     
-    filterButton = tk.Button(sideBar, text = "filter:", command = lambda: {}, padx= 4, pady = 10, bg=BLUE, cursor= "sb_down_arrow")
-    filterButton.grid(row = 2, column = 1, sticky= "we")
-    hoverBind(filterButton, BLUE_DARKEN)
+    filter_label = tk.Label(sideBar, text = "Filter: ", bg = GOLD)
+    filter_label.grid(row = 2, column = 0, sticky = "NSWE")
+
+    filter_list = ["all", "important", "junk"]
+    filterButton = ttk.Combobox(sideBar, values=filter_list)
+    filterButton.set("all")
+    filterButton.bind("<<ComboboxSelected>>", on_change_filter)
+    
+    filterButton.grid(row = 2, column = 1, columnspan= 2, sticky= "NSWE")
     
 
     #https://stackoverflow.com/questions/3085696/adding-a-scrollbar-to-a-group-of-widgets-in-tkinter
@@ -76,15 +80,23 @@ def app(smtpSocket, pop3Socket):
     
     mailbox_canvas.configure(yscrollcommand = mailScroll.set)
     
-    mailbox_canvas.grid(row = 3, column= 0, columnspan=2 ,sticky= "NW") 
-    mailScroll.grid(row = 3, column = 1, sticky = "NSE")
+    mailbox_canvas.grid(row = 3, column= 0, columnspan=3 ,sticky= "NW") 
+    mailScroll.grid(row = 3, column = 2, sticky = "NSE")
     mailbox_canvas.create_window((0, 0), window=mailbox, anchor="nw")
     
     mailbox.bind("<Configure>", lambda event, canvas=mailbox_canvas: onFrameConfigure(canvas))
+    
+    get_messages(pop3_addr, mails, user)
+    load_all_mails(mails, ".mails/" + user[0])
+    inbox(mailbox, emptySpace, mails)
 
     sideBar.grid(row=0 ,column= 0, ipadx= 2)
     sideBar.update_idletasks()
+    
     window.mainloop()
+
+def on_change_filter(event):
+    pass
 
 def onFrameConfigure(canvas):
     canvas.configure(scrollregion=canvas.bbox("all"))
@@ -104,7 +116,7 @@ def destroy_all_widgets(frame):
     frame.grid_forget()
 
         
-def inbox(window : tk.Frame, pop3Socket : socket, mts : tk.Frame, mails : dict):
+def inbox(window : tk.Frame, mts : tk.Frame, mails : dict):
     
     #mails = getMailList(pop3Socket)
      # Phương thức khởi tạo
@@ -121,16 +133,22 @@ def inbox(window : tk.Frame, pop3Socket : socket, mts : tk.Frame, mails : dict):
         item = tk.Frame(window, width= 300, height= 50, padx= 2, bg= WHITE, cursor = "hand2", bd =2 )
         item.grid_propagate(False);
         item.update_idletasks()
-        tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["From"], foreground = TEXT_HIGHLIGHT, bg =WHITE, font=("sans-serif", 8, "bold")).grid(row = 0, column = 0, sticky = "nw")
+        Sender = tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["From"], bg =WHITE, font=("sans-serif", 8, "bold"))
+        Sender.grid(row = 0, column = 0, sticky = "nw")
+        if mails[msg_uidl].read == True:
+            Sender.config(foreground = TEXT_HIGHLIGHT)
+        else:
+            Sender.config(foreground = TEXT_READ)
+            
         tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["Subject"], bg =WHITE).grid(row = 1, column = 0, sticky = "nw")
         item.grid(row = i, column = 0, sticky = "N", ipady= 2)
-        item.bind("<Button-1>", lambda event ,mts=mts, mail = mails[msg_uidl], pop3Socket=pop3Socket: { readMail(event, mts, mail, pop3Socket), showMTSpace(mts) })
+        item.bind("<Button-1>", lambda event ,mts=mts, mail = mails[msg_uidl]: { readMail(event, mts, mail), showMTSpace(mts) })
         hoverBind(item, WHITE_DARKEN)
         window.insert(tk.END, item)
         i = i+1
 
 
-def readMail(event ,window, mail: dict, pop3Socket): 
+def readMail(event ,window, mail: dict): 
     destroy_all_widgets(window)
     message_string = mail.message_as_string
     mail_component = get_message_from_string(message_string)
@@ -168,7 +186,7 @@ def readMail(event ,window, mail: dict, pop3Socket):
     
     tk.Label(window, text = "there are " + str(attachent_count) + " attachments").grid(row = 7, column = 1)
 
-def draft(window, client_socket):
+def draft(window, smpt_addr):
     destroy_all_widgets(window)
     # Tạo các nhãn và ô chỉnh sửa
     tk.Label(window, text="From:").grid(row=0, column=0, sticky="e")
@@ -203,7 +221,7 @@ def draft(window, client_socket):
     # Tạo nút "Send"
     send_button = tk.Button(window, text="Send",
                             command=lambda: sendMail(
-                                client_socket,
+                                smpt_addr,
                                 from_entry.get(),
                                 to_entry.get(),
                                 cc_entry.get(),
@@ -218,8 +236,6 @@ def draft(window, client_socket):
     #nút này để xóa phần viết thư
     cancel_button = tk.Button(window, text = "Cancel", command=lambda: destroy_all_widgets(window))
     cancel_button.grid(row =12, column= 2, pady = 10)
-
-
 
 
 def on_enter(event, color:str):
@@ -251,7 +267,9 @@ def browse_file( file_paths : List[str], window):
     f_paths_str = ','.join(basename(f) for f in file_paths)
     tk.Label(window, text = " Selected files: %s" % f_paths_str).grid(row = 10, column = 1, sticky="w")
     
-def get_messages(client_socket : socket, mails : dict, user_name : str):
+def get_messages(pop3_addr: tuple, mails : dict, user):
+    client_socket = sign_in(pop3_addr, user) 
+
     msg_count = get_message_count(client_socket)
     uidl_list = get_uidl_list(client_socket)
 
@@ -269,4 +287,4 @@ def get_messages(client_socket : socket, mails : dict, user_name : str):
         mails[msg_uidl] = MailMessage(msg_as_string, ["sender:" + sender], msg_uidl, False)
      
     if has_new_messages:
-        save_all_mails(mails, ".mails/" + user_name)
+        save_all_mails(mails, ".mails/" + user[0])

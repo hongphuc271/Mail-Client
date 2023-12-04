@@ -7,20 +7,7 @@ import configparser
 import poplib
 
 
-def login(clientSocket: socket, usermail: str, password: str) -> str:
-    userCommand: str = "USER %s\r\n" %usermail
-    clientSocket.send(userCommand.encode())
-    clientSocket.recv(1024)
-    
-    passCommand = "PASS %s\r\n" %password
-    clientSocket.send(passCommand.encode())
-    clientSocket.recv(1024)
-        
-    print("Dang nhap thanh cong")
-    return usermail
-   
 
-#
 
 
 def deleteMail(clientSocket: socket, mailId: int):

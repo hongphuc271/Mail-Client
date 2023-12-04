@@ -15,10 +15,6 @@ time.sleep(2.0)
 smtpMailserver : tuple = ("127.0.0.1", 2225)
 pop3Mailserver : tuple = ("127.0.0.1", 3335)
 
-# Create socket called clientSocket and establish a TCP connection with mailserver
-#AF_INET = IPv4, SOCK_STREAM = TCP
 
-smtpClientSocket : socket = initiate(smtpMailserver)
-pop3ClientSocket : socket = initiate(pop3Mailserver)
-app(smtpClientSocket, pop3ClientSocket)
+app(smtpMailserver, pop3Mailserver)
 
