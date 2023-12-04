@@ -44,24 +44,30 @@ def app(smtpSocket, pop3Socket):
     # khung để làm việc với viết thư và đọc thư, mở ra khi các hàm được chọn, có thể tự đóng lại để tiết kiệm chỗ trống
     emptySpace = tk.Frame(window)
     
-    newMailButton = tk.Button(sideBar, text = "+ New Mail", command = lambda: { draft(emptySpace, smtpSocket), emptySpace.grid(row = 0, column= 2) }, height = 2, bd =2, bg=BLUE, padx= 115, cursor="plus")
-    newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 1, sticky= "NW")
+    newMailButton = tk.Button(sideBar, text = "+ New Mail", command = lambda: { draft(emptySpace, smtpSocket), emptySpace.grid(row = 0, column= 2) }, height = 2, bd =2, bg=BLUE, width=42, cursor="plus")
+    newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 2, sticky= "NW")
     hoverBind(newMailButton, BLUE_DARKEN)
     
-    refreshButton = tk.Button(sideBar, text = get_mail_state[user != "unknown"], command = lambda: {{login(pop3Socket, "inbox@testmail.net", "testpass"), sideBar.update_idletasks() } if user == "unknown" else inbox(mailbox, pop3Socket, emptySpace)}, height = 2, bd =2, bg=BLUE, padx= 124, cursor= "exchange")
+    
+
+    refreshButton = tk.Button(sideBar, text = get_mail_state[user != "unknown"], command = lambda: {{login(pop3Socket, "inbox@testmail.net", "testpass"), sideBar.update_idletasks() } if user == "unknown" else inbox(mailbox, pop3Socket, emptySpace)}, height = 2, bd =2, bg=BLUE, width=32, cursor= "exchange")
     refreshButton.grid(row= 1, column = 0, columnspan = 1, sticky= "NW")
     hoverBind(refreshButton, BLUE_DARKEN)
     
+    filterButton = tk.Button(sideBar, text = "filter:", command = lambda: {}, height = 2, bd =2, bg=BLUE, width=8, cursor= "exchange", anchor = "w")
+    filterButton.grid(row = 1, column = 1, sticky= "w")
+    hoverBind(filterButton, BLUE_DARKEN)
+    
     
     #https://stackoverflow.com/questions/3085696/adding-a-scrollbar-to-a-group-of-widgets-in-tkinter
-    mailbox_canvas = tk.Canvas(sideBar, height= 400, width= 294, borderwidth=0)
+    mailbox_canvas = tk.Canvas(sideBar, height= 400, width= 300, borderwidth=0)
     mailbox = tk.Frame(mailbox_canvas, bg= "#bfc2c9", height= 400, width= 300)  
     mailScroll = tk.Scrollbar(sideBar, orient="vertical", command= mailbox_canvas.yview)
     
     mailbox_canvas.configure(yscrollcommand = mailScroll.set)
     
-    mailbox_canvas.grid(row = 2, column= 0, sticky= "NW") 
-    mailScroll.grid(row = 2, column = 0, sticky = "NSE")
+    mailbox_canvas.grid(row = 2, column= 0, columnspan=2 ,sticky= "NW") 
+    mailScroll.grid(row = 2, column = 1, sticky = "NSE")
     mailbox_canvas.create_window((0, 0), window=mailbox, anchor="nw")
     
     mailbox.bind("<Configure>", lambda event, canvas=mailbox_canvas: onFrameConfigure(canvas))
