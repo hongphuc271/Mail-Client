@@ -1,11 +1,11 @@
-﻿from ast import Lambda
-from cProfile import label
+﻿from cProfile import label
 import email
 from email.iterators import body_line_iterator
 from logging import warning
 import mailbox
 from pickle import FALSE
 from queue import Empty
+from re import M
 from smtplib import SMTP
 from sqlite3 import Row
 from textwrap import wrap
@@ -25,7 +25,7 @@ LIGHTGREY = "#bfc2c9"
 TEXT_HIGHLIGHT = "#230f94" 
 
 def app(smtpSocket, pop3Socket):
-    
+    user = login(pop3Socket, "inbox@testmail.net", "testpass")
     get_mail_state = [" log in ", "get mail"]
     #cửa sổ làm việc chính
     window = tk.Tk()
@@ -43,13 +43,12 @@ def app(smtpSocket, pop3Socket):
     
     # khung để làm việc với viết thư và đọc thư, mở ra khi các hàm được chọn, có thể tự đóng lại để tiết kiệm chỗ trống
     emptySpace = tk.Frame(window)
-  
     
     newMailButton = tk.Button(sideBar, text = "+ New Mail", command = lambda: { draft(emptySpace, smtpSocket), emptySpace.grid(row = 0, column= 2) }, height = 2, bd =2, bg=BLUE, padx= 115, cursor="plus")
     newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 1, sticky= "NW")
     hoverBind(newMailButton, BLUE_DARKEN)
     
-    refreshButton = tk.Button(sideBar, text = get_mail_state[user != "unknown"], command = lambda: {login(pop3Socket, "inbox@testmail.net", "testpass") if user == "unknown" else inbox(mailbox, pop3Socket, emptySpace)}, height = 2, bd =2, bg=BLUE, padx= 124, cursor= "exchange")
+    refreshButton = tk.Button(sideBar, text = get_mail_state[user != "unknown"], command = lambda: {{login(pop3Socket, "inbox@testmail.net", "testpass"), sideBar.update_idletasks() } if user == "unknown" else inbox(mailbox, pop3Socket, emptySpace)}, height = 2, bd =2, bg=BLUE, padx= 124, cursor= "exchange")
     refreshButton.grid(row= 1, column = 0, columnspan = 1, sticky= "NW")
     hoverBind(refreshButton, BLUE_DARKEN)
     
@@ -96,45 +95,27 @@ def inbox(window, pop3Socket, mts):
     #   3.In ra từ dữ liệu của 2
     #   4.Lặp lại 2 3 cho đến dkhi hết danh sách mail
     
-    mails = getMailList(pop3Socket)
+    #mails = getMailList(pop3Socket)
+    mail_count = get_message_count(pop3Socket)
     mailItems = []
-    print(mailItems)
-    i=1
-    for mail in mails:
-        text = mail.split('\n')
-        FROM: str
-        SUBJECT: str
-        for chunk in text:
-            if chunk.startswith('From:'):
-                FROM = chunk[5:]
-            elif chunk.startswith("Subject:"):
-                SUBJECT = chunk[8:]
-
+    for i in range(1, mail_count + 1):
+        mail = get_message_from_string(retrieve_message_as_string(pop3Socket ,i))
+        
         item = tk.Frame(window, width= 296, height= 50, padx= 2, bg= WHITE, cursor = "hand2", bd =2 )
         item.grid_propagate(False);
         item.update_idletasks()
-        tk.Label(item, text = FROM, foreground = TEXT_HIGHLIGHT, bg =WHITE, font=("sans-serif", 8, "bold")).grid(row = 0, column = 0, sticky = "nw")
-        tk.Label(item, text = SUBJECT, bg =WHITE).grid(row = 1, column = 0, sticky = "nw")
-        
+        tk.Label(item, text = mail["From"], foreground = TEXT_HIGHLIGHT, bg =WHITE, font=("sans-serif", 8, "bold")).grid(row = 0, column = 0, sticky = "nw")
+        tk.Label(item, text = mail["Subject"], bg =WHITE).grid(row = 1, column = 0, sticky = "nw")
         item.grid(row = i-1, column = 0, sticky = "N", ipady= 2)
         item.bind("<Button-1>", lambda event ,mts=mts, index=i, pop3Socket=pop3Socket: { readMail(event, mts, index, pop3Socket), showMTSpace(mts) })
         hoverBind(item, WHITE_DARKEN)
-        i = i + 1
-        
-       
         mailItems.append(item)
-        
 
-    #   misc: inbox scollable khi overflow
 
 def readMail(event ,window, mailId: int, pop3Socket): 
-    # TODO:
-    #   1.Lấy id từ mail được chọn
-    #   2.Lấy mail từ id
-    #   3.In ra mail trong emptySpace (window)
-    #   4.Có nút để thoát
     destroy_all_widgets(window)
-    mail = email.message_from_string(retrieveMail(pop3Socket, mailId))
+    message_string = retrieve_message_as_string(pop3Socket, mailId)
+    mail = get_message_from_string(message_string)
     
     mailparts = ["Date" ,"From", "To", "Cc", "Bcc", "Subject"]
     i = 0
@@ -145,7 +126,18 @@ def readMail(event ,window, mailId: int, pop3Socket):
     
     body = tk.Text(window, bg = WHITE, width = 80, height=18, padx = 24, relief='flat')
     body.grid(row = 6, column = 0, columnspan=2,sticky= "NW")
-    body.insert(tk.END, "\n".join(body_line_iterator(mail)))
+    
+    attachent_count = 0
+    if mail.is_multipart():
+        for part in mail.walk():
+            content_type : str = part.get_content_type()
+            if content_type == "text/plain":
+                body.insert(tk.END, "\n\n" + part.get_payload(decode=True).decode())
+            elif content_type.startswith("multipart"):
+                attachent_count += 1
+    else:
+        body.insert(tk.END, "\n\n" + mail.get_payload(decode=True).decode())
+
     body.configure(state='disabled')
 
     scroll = tk.Scrollbar(window, orient='vertical', command=body.yview)
@@ -154,6 +146,10 @@ def readMail(event ,window, mailId: int, pop3Socket):
 
     cancel_button = tk.Button(window, text = "Cancel", command=lambda: destroy_all_widgets(window))
     cancel_button.grid(row = 7, column= 0, pady = 10)
+
+    download_mail_button = tk.Button(window, text = "download mail", command= lambda: write_attachments_to_files(message_string, "C:/Users/LENOVO/Downloads/"))
+    download_mail_button.grid(row = 7, column = 1, pady = 10)
+    get_attachmentsbutton = tk.Button(window, text = "download mail", command= lambda: write_attachments_to_files(message_string, "C:/Users/LENOVO/Downloads/"))
 
 def draft(window, client_socket):
     destroy_all_widgets(window)
@@ -184,7 +180,7 @@ def draft(window, client_socket):
 
     # Tạo nút "Browse" để chọn file đính kèm
     file_paths = []
-    browse_button = tk.Button(window, text="Browse", command=lambda: browse_file(file_paths))
+    browse_button = tk.Button(window, text="Browse", command=lambda: browse_file(file_paths, window))
     browse_button.grid(row=10, column=0, pady=10)
 
     # Tạo nút "Send"
@@ -218,4 +214,22 @@ def on_leave(event, color:str):
     for widget in event.widget.winfo_children():
         widget.config(bg=color)
     event.widget.config(bg=color)  
+
+
+def browse_file( file_paths : List[str], window):
+    path = filedialog.askopenfilename(initialdir="/", title="Select File", filetypes=(("Text files", "*.txt"), ("All files", "*.*"))) 
+    if file_paths.count(path) > 0:
+        return
     
+    file_paths.append(path)
+    file_size = os.stat(path).st_size
+    total_size = 0
+    for fp in file_paths:
+        total_size += os.stat(path).st_size
+    
+    if total_size + file_size > 3145728:
+        return
+
+    # Hiện tên file được chọn
+    f_paths_str = ','.join(basename(f) for f in file_paths)
+    tk.Label(window, text = " Selected files: %s" % f_paths_str).grid(row = 10, column = 1, sticky="w")
