@@ -85,7 +85,7 @@ class TabAll:
 
         # Tạo nút Get messages
         self.get_msg_button = tk.Button(self.tab_all, text="Get messages", command=self.get_messages_local)
-        self.get_msg_button.grid(row=0, column = 2)
+        self.get_msg_button.grid(row=0, column = 1, columnspan = 2) #Chỉnh nút Get Messages về vị trí center(near center)
 
         # Tạo Frame chứa nội dung bên phải
         self.right_frame = tk.Frame(self.tab_all)
@@ -194,7 +194,8 @@ class TabBySender:
 
         # Tạo nút Get messages
         self.get_msg_button = tk.Button(self.tab_bysender, text="Get messages", command=self.get_messages_local)
-        self.get_msg_button.grid(row=0, column = 2)
+        self.get_msg_button.grid(row=0, column = 1, columnspan = 2) #Chỉnh nút Get Messages về vị trí center(near center)
+
 
         # Tạo Frame chứa nội dung bên phải
         self.right_frame = tk.Frame(self.tab_bysender)
