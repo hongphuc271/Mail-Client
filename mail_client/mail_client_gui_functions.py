@@ -24,6 +24,9 @@ WHITE_DARKEN = "#c2cdcf"
 LIGHTGREY = "#bfc2c9"
 TEXT_HIGHLIGHT = "#230f94" 
 
+mails : dict = {}
+
+
 def app(smtpSocket, pop3Socket):
     user = login(pop3Socket, "inbox@testmail.net", "testpass")
     get_mail_state = [" log in ", "get mail"]
