@@ -1,21 +1,31 @@
 import tkinter as tk
+from tkinter import Scrollbar
 
-def update_label():
-    # Hàm bạn muốn thực hiện sau mỗi khoảng thời gian
-    label.config(text="Updated at least every 1000 milliseconds")
-    # Gọi lại hàm sau 1000 milliseconds (1 giây)
-    root.after(1000, update_label)
+def on_select(event):
+    # Lấy các phần tử được chọn từ Listbox
+    selected_items = listbox.curselection()
+    for i in selected_items:
+        print(listbox.get(i))
 
-# Tạo cửa sổ tkinter
 root = tk.Tk()
-root.title("Timer Example")
+root.title("Scrollable Listbox Example")
 
-# Tạo một label để hiển thị thông tin
-label = tk.Label(root, text="Initial Text")
-label.pack(padx=10, pady=10)
+# Tạo một Listbox
+listbox = tk.Listbox(root, selectmode=tk.MULTIPLE)
 
-# Bắt đầu timer bằng cách gọi hàm đầu tiên
-update_label()
+# Thêm dữ liệu vào Listbox
+for i in range(50):
+    listbox.insert(tk.END, f"Item {i}")
 
-# Main loop của tkinter
+# Kết hợp Listbox với một Scrollbar
+scrollbar = Scrollbar(root, command=listbox.yview)
+listbox.config(yscrollcommand=scrollbar.set)
+
+# Gán hàm xử lý sự kiện cho việc chọn phần tử trong Listbox
+listbox.bind("<<ListboxSelect>>", on_select)
+
+# Hiển thị Listbox và Scrollbar
+listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
 root.mainloop()

@@ -7,6 +7,7 @@ import time
 def on_refresh_timer_timeout():
 	get_messages(client_socket, mails, user_info[0])
 	tab_bysender.update_message_display()
+	tab_byfolder.update_message_display()
 	tab_all.update_message_display()
 	print("Refreshed")
 	root.after(refresh_time, on_refresh_timer_timeout) 
@@ -21,7 +22,7 @@ mails : dict = {}
 
 #Khởi tạo socket và kết nối tới mail server
 mail_server = ("127.0.0.1", 3335)
-user_info = ("person2@test.net", "person2")
+user_info = ("person1@test.net", "person1")
 client_socket : socket = sign_in(mail_server, user_info)
 
 # Tạo cửa sổ chính
@@ -41,11 +42,12 @@ load_messages(mails, user_info[0])
 
 #Tạo timer refresh
 if not has_config(".mails"):
-	save_config(".mails", {"refresh_time" : 5})
-refresh_time = int(load_config(".mails")["refresh_time"]) * 1000
+	save_config(".mails", {"Settings" : {"refresh_time" : 5}, "Filters" : {}})
+refresh_time = int(load_config(".mails")["Settings"]["refresh_time"]) * 1000
 root.after(refresh_time, on_refresh_timer_timeout)
 
 tab_bysender = TabBySender(client_socket, notebook, mails, user_info)
+tab_byfolder = TabByFolder(client_socket, notebook, mails, user_info)
 tab_all = TabAll(client_socket, notebook, mails, user_info)
 
 # Bắt đầu vòng lặp sự kiện

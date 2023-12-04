@@ -17,16 +17,16 @@ class MailMessage:
 def sign_in(mail_server : tuple, user_info) -> socket:
 	client_socket : socket = socket(AF_INET, SOCK_STREAM)
 	client_socket.connect(mail_server)
-	client_socket.recv(1024)
+	print("Recv: ", client_socket.recv(1024))
 
 
 	user_command = "USER %s\r\n" % user_info[0]
 	client_socket.send(user_command.encode())
-	client_socket.recv(1024).decode()
+	print("Recv: ", client_socket.recv(1024).decode())
 
 	pass_command = "PASS %s\r\n" % user_info[1]
 	client_socket.send(pass_command.encode())
-	client_socket.recv(1024).decode()
+	print("Recv: ", client_socket.recv(1024).decode())
 
 	return client_socket
 
@@ -34,7 +34,7 @@ def get_message_count(client_socket : socket) -> int:
     stat_command = "STAT\r\n"
     client_socket.send(stat_command.encode())
     stat = client_socket.recv(1024).decode()
-    #print(stat)
+    print("Recv: ", stat)
     #Ex: +OK 12 1024
     message_count = int(stat.split(" ", 2)[1])
     #print(message_count)
@@ -43,16 +43,29 @@ def get_message_count(client_socket : socket) -> int:
 def retrieve_message_as_string(client_socket : socket, message_index : int) -> str:
     retr_command = "RETR %d\r\n" % message_index
     client_socket.send(retr_command.encode())
-    raw_msg : str = client_socket.recv(104857600).decode()
-    msg_as_string : str = raw_msg.split("\r\n", 1)[1]
-    #Ex: +OK 1024
+    raw_msg = client_socket.recv(1000000).decode()
+    
+    checksum_str = raw_msg[4:raw_msg.index("\r\n")]
+    checksum = int(checksum_str)
+    #Ex: +OK 1024\r\n
     #    ...(message)...
+    size_count = len(raw_msg) - 3 - len(checksum_str) - 1
+    while size_count < checksum:
+        add_data = client_socket.recv(checksum - size_count).decode()
+        raw_msg += add_data
+        size_count += len(add_data)
+        if size_count >= checksum:
+            raw_msg += client_socket.recv(8).decode()
+
+    print("Recv: ", raw_msg)
+    msg_as_string : str = raw_msg.split("\r\n", 1)[1]
     return msg_as_string
 
 def get_uidl_list(client_socket : socket) -> List[str]:
     uidl_command = "UIDL\r\n"
     client_socket.send(uidl_command.encode())
     uidl = client_socket.recv(1024).decode()
+    print("Recv: ", uidl)
     uidl_list : List[str] = uidl.split('\r\n')
     uidl_list.pop(0)
     for i in range(0, len(uidl_list)):
@@ -66,18 +79,28 @@ def get_uidl_list(client_socket : socket) -> List[str]:
 def get_message_from_string(msg_as_string : str):
     return email.message_from_string(msg_as_string)
 
+def get_full_parsed_message(msg_as_string : str) -> str:
+    parsed_data = parse_message(msg_as_string)
+    msg = parsed_data[0] + parsed_data[1]
+    if parsed_data[2] > 1:
+        msg += "\nThere are " + parsed_data[2] + " messages"
+    elif parsed_data[2] == 1:
+        msg += "\nThere is 1 message"
+    return msg
+
 # Hàm phân tích dữ liệu từ email chuỗi
-def parse_message(msg_as_string : str) -> str:
+# Trả về: (Thông tin cơ bản, Body text, Số file đính kèm) 
+def parse_message(msg_as_string : str) -> (str, str, int):
     msg = email.message_from_string(msg_as_string)
 
     # Lưu thông tin từ email
-    out_msg = ""
-    out_msg += "Date: %s" % msg["Date"]
-    out_msg += "\nFrom: %s" % msg["From"]
-    out_msg += "\nTo: %s" % msg["To"]
-    out_msg += "\nCc: %s" % msg["Cc"]
+    out_msg = ["", "", 0]
+    out_msg[0] += "Date: %s" % msg["Date"]
+    out_msg[0] += "\nFrom: %s" % msg["From"]
+    out_msg[0] += "\nTo: %s" % msg["To"]
+    out_msg[0] += "\nCc: %s" % msg["Cc"]
     #out_msg += "\nBcc: %s" % msg["Bcc"]
-    out_msg += "\nSubject: %s" % msg["Subject"]
+    out_msg[0] += "\nSubject: %s" % msg["Subject"]
 
     # Refs: https://stackoverflow.com/questions/4094933/python-imap-how-to-parse-multipart-mail-content
     attachent_count = 0
@@ -85,19 +108,16 @@ def parse_message(msg_as_string : str) -> str:
         for part in msg.walk():
             content_type : str = part.get_content_type()
             if content_type == "text/plain":
-                out_msg += "\n\n" + part.get_payload(decode=True).decode()
+                out_msg[1] += "\n\n" + part.get_payload(decode=True).decode()
             elif content_type.startswith("multipart"):
                 attachent_count += 1
     else:
-        out_msg += "\n\n" + msg.get_payload(decode=True).decode()
+        out_msg[1] += "\n\n" + msg.get_payload(decode=True).decode()
     ####
         
-    if attachent_count > 1:
-        out_msg += "\n\nThere are %d attachments" % attachent_count
-    elif attachent_count == 1:
-        out_msg += "\n\nThere is 1 attachment"
+    out_msg[2] += attachent_count
 
-    return out_msg
+    return tuple(out_msg)
 
 def save_all_mails(mails : dict, folder_path : str):
     if not os.path.exists(folder_path):
@@ -162,7 +182,8 @@ def save_config(folder_path : str, cfg_parameters : dict):
     config = configparser.ConfigParser()
 
     # Thêm các giá trị vào file cấu hình
-    config['Settings'] = cfg_parameters
+    for section in cfg_parameters.keys():
+        config[section] = cfg_parameters.get(section, {})
 
     # Lưu file cấu hình
     with open(folder_path + "/" + 'config.cfg', 'w') as configfile:
@@ -175,4 +196,42 @@ def load_config(folder_path : str) -> dict:
     config.read(folder_path + "/" + "config.cfg")
 
     # Lấy giá trị từ file cấu hình
-    return dict(config["Settings"]).copy()
+    cfg_parameters = {}
+    for section in config.sections():
+        cfg_parameters[section] = config[section]
+
+    return cfg_parameters
+
+def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
+    new_msg = MailMessage(msg_as_string, [], uidl, False)
+    
+    #Thêm tag xác định người gửi
+    msg = get_message_from_string(msg_as_string)
+    sender = msg["From"]
+    if sender is None:
+        sender = "Unknown"
+    new_msg.tags.append("sender:" + sender)
+
+    #Thêm tag xác định thư mục
+    folders = []
+    subject = msg["Subject"]
+    content = parse_message(msg_as_string)[1]
+
+    cfg_filters : dict = load_config(".mails").get("Filters", {})
+
+    while(cfg_filters != {}):
+        if any(key in content for key in cfg_filters["Spam"].split(", ")):
+            folders.append("Spam")
+            break
+        if sender in cfg_filters["Project"].split(", "):
+            folders.append("Project")
+        if any(key in subject for key in cfg_filters["Important"].split(", ")):
+            folders.append("Important")
+        if any(key in content for key in cfg_filters["Work"].split(", ")):
+            folders.append("Work")
+        break
+
+    if len(folders) > 0:
+        new_msg.tags.append("folder:" + ','.join(folders))
+
+    return new_msg
