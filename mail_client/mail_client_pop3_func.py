@@ -1,6 +1,8 @@
 from distutils.command import clean
 from socket import *
 
+user = 'unknown'
+
 def login(clientSocket: socket, usermail: str, password: str) -> str:
     userCommand: str = "USER %s\r\n" %usermail
     clientSocket.send(userCommand.encode())
@@ -11,7 +13,7 @@ def login(clientSocket: socket, usermail: str, password: str) -> str:
     clientSocket.recv(1024)
         
     print("Dang nhap thanh cong")
-    return usermail
+    user = usermail
    
 def getMailList(clientSocket: socket):
     statCommand = "STAT\r\n"

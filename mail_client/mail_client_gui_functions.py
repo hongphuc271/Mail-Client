@@ -24,14 +24,14 @@ WHITE_DARKEN = "#c2cdcf"
 LIGHTGREY = "#bfc2c9"
 TEXT_HIGHLIGHT = "#230f94" 
 
-
 def app(smtpSocket, pop3Socket):
-    login(pop3Socket, "inbox@testmail.net", "testpass");
+    
+    get_mail_state = [" log in ", "get mail"]
     #cửa sổ làm việc chính
     window = tk.Tk()
     window.title("Email Sender")
 
-    #window.minsize(300,400)
+    window.maxsize(1000,500)
 
     # thanh làm việc chính, chứa nút viết thư và hộp thư
     sideBar = tk.Frame(window, width=300, height=200, bd= 2)
@@ -49,7 +49,7 @@ def app(smtpSocket, pop3Socket):
     newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 1, sticky= "NW")
     hoverBind(newMailButton, BLUE_DARKEN)
     
-    refreshButton = tk.Button(sideBar, text = "get mail", command = lambda: inbox(mailbox, pop3Socket, emptySpace), height = 2, bd =2, bg=BLUE, padx= 124, cursor= "exchange")
+    refreshButton = tk.Button(sideBar, text = get_mail_state[user != "unknown"], command = lambda: {login(pop3Socket, "inbox@testmail.net", "testpass") if user == "unknown" else inbox(mailbox, pop3Socket, emptySpace)}, height = 2, bd =2, bg=BLUE, padx= 124, cursor= "exchange")
     refreshButton.grid(row= 1, column = 0, columnspan = 1, sticky= "NW")
     hoverBind(refreshButton, BLUE_DARKEN)
     
@@ -67,10 +67,6 @@ def app(smtpSocket, pop3Socket):
     
     mailbox.bind("<Configure>", lambda event, canvas=mailbox_canvas: onFrameConfigure(canvas))
 
-    #lấy mail từ pop3 và viết nó vào mailbox
-    
-    inbox(mailbox, pop3Socket, emptySpace)
-    
     sideBar.grid(row=0 ,column= 0, ipadx= 2)
     sideBar.update_idletasks()
     window.mainloop()
@@ -140,7 +136,7 @@ def readMail(event ,window, mailId: int, pop3Socket):
     destroy_all_widgets(window)
     mail = email.message_from_string(retrieveMail(pop3Socket, mailId))
     
-    mailparts = ["From", "To", "Cc", "Bcc", "Subject"]
+    mailparts = ["Date" ,"From", "To", "Cc", "Bcc", "Subject"]
     i = 0
     for part in mailparts:
          tk.Label(window, text = part + ": ", justify="left").grid(row = i, column = 0, sticky = "NW")
@@ -148,16 +144,16 @@ def readMail(event ,window, mailId: int, pop3Socket):
          i = i + 1
     
     body = tk.Text(window, bg = WHITE, width = 80, height=18, padx = 24, relief='flat')
-    body.grid(row = 5, column = 0, columnspan=2,sticky= "NW")
+    body.grid(row = 6, column = 0, columnspan=2,sticky= "NW")
     body.insert(tk.END, "\n".join(body_line_iterator(mail)))
     body.configure(state='disabled')
 
     scroll = tk.Scrollbar(window, orient='vertical', command=body.yview)
-    scroll.grid(row = 5, column = 1, sticky = "NSE")
+    scroll.grid(row = 6, column = 1, sticky = "NSE")
     body.configure(yscrollcommand=scroll.set)
 
     cancel_button = tk.Button(window, text = "Cancel", command=lambda: destroy_all_widgets(window))
-    cancel_button.grid(row =6, column= 0, pady = 10)
+    cancel_button.grid(row = 7, column= 0, pady = 10)
 
 def draft(window, client_socket):
     destroy_all_widgets(window)
