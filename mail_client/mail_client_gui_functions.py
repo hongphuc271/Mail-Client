@@ -31,7 +31,7 @@ def app(smtpSocket, pop3Socket):
     window = tk.Tk()
     window.title("Email Sender")
 
-    window.maxsize(1000,500)
+    window.maxsize(1100,500)
 
     # thanh làm việc chính, chứa nút viết thư và hộp thư
     sideBar = tk.Frame(window, width=300, height=200, bd= 2)
@@ -42,23 +42,29 @@ def app(smtpSocket, pop3Socket):
     
     
     # khung để làm việc với viết thư và đọc thư, mở ra khi các hàm được chọn, có thể tự đóng lại để tiết kiệm chỗ trống
-    emptySpace = tk.Frame(window)
+    emptySpace = tk.Frame(window, padx = 20)
     
-    newMailButton = tk.Button(sideBar, text = "+ New Mail", command = lambda: { draft(emptySpace, smtpSocket), emptySpace.grid(row = 0, column= 2) }, height = 2, bd =2, bg=BLUE, width=42, cursor="plus")
-    newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 2, sticky= "NW")
+    newMailButton = tk.Button(sideBar, text = "+ New Mail", command = lambda: { draft(emptySpace, smtpSocket), emptySpace.grid(row = 0, column= 2) }, bd =2, bg=BLUE, padx= 124, pady = 10, cursor="plus")
+    newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 2, sticky= "NWE")
     hoverBind(newMailButton, BLUE_DARKEN)
     
     
+    inboxTab = tk.Button(sideBar, text = "inbox", command= lambda: {}, cursor= "hand2", bg = BLUE, pady= 10)
+    hoverBind(inboxTab, BLUE_DARKEN)
+    trashTab = tk.Button(sideBar, text = "trash", command = lambda: {}, cursor ="hand2", bg = LIGHTGREY, pady= 10)
+    hoverBind(trashTab, WHITE_DARKEN)
+    inboxTab.grid(row = 1, column = 0, sticky= "nwe")
+    trashTab.grid(row = 1, column = 1, sticky= "nwe")
 
-    refreshButton = tk.Button(sideBar, text = get_mail_state[user != "unknown"], command = lambda: {{login(pop3Socket, "inbox@testmail.net", "testpass"), sideBar.update_idletasks() } if user == "unknown" else inbox(mailbox, pop3Socket, emptySpace)}, height = 2, bd =2, bg=BLUE, width=32, cursor= "exchange")
-    refreshButton.grid(row= 1, column = 0, columnspan = 1, sticky= "NW")
+    refreshButton = tk.Button(sideBar, text = get_mail_state[user != "unknown"], command = lambda: {{login(pop3Socket, "inbox@testmail.net", "testpass"), sideBar.update_idletasks() } if user == "unknown" else inbox(mailbox, pop3Socket, emptySpace)}, bd =2, bg=BLUE, padx= 104, pady = 10, cursor= "exchange")
+    refreshButton.grid(row= 2, column = 0, columnspan = 1, sticky= "NWE")
     hoverBind(refreshButton, BLUE_DARKEN)
     
-    filterButton = tk.Button(sideBar, text = "filter:", command = lambda: {}, height = 2, bd =2, bg=BLUE, width=8, cursor= "exchange", anchor = "w")
-    filterButton.grid(row = 1, column = 1, sticky= "w")
+    filterButton = tk.Button(sideBar, text = "filter:", command = lambda: {}, padx= 4, pady = 10, bg=BLUE, cursor= "sb_down_arrow")
+    filterButton.grid(row = 2, column = 1, sticky= "we")
     hoverBind(filterButton, BLUE_DARKEN)
     
-    
+
     #https://stackoverflow.com/questions/3085696/adding-a-scrollbar-to-a-group-of-widgets-in-tkinter
     mailbox_canvas = tk.Canvas(sideBar, height= 400, width= 300, borderwidth=0)
     mailbox = tk.Frame(mailbox_canvas, bg= "#bfc2c9", height= 400, width= 300)  
@@ -66,8 +72,8 @@ def app(smtpSocket, pop3Socket):
     
     mailbox_canvas.configure(yscrollcommand = mailScroll.set)
     
-    mailbox_canvas.grid(row = 2, column= 0, columnspan=2 ,sticky= "NW") 
-    mailScroll.grid(row = 2, column = 1, sticky = "NSE")
+    mailbox_canvas.grid(row = 3, column= 0, columnspan=2 ,sticky= "NW") 
+    mailScroll.grid(row = 3, column = 1, sticky = "NSE")
     mailbox_canvas.create_window((0, 0), window=mailbox, anchor="nw")
     
     mailbox.bind("<Configure>", lambda event, canvas=mailbox_canvas: onFrameConfigure(canvas))
