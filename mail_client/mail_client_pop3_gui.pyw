@@ -39,11 +39,12 @@ notebook.add(tab_all, text="User")
 
 load_messages(mails, user_info[0])
 
+#Tạo timer refresh
 if not has_config(".mails"):
 	save_config(".mails", {"refresh_time" : 5})
 refresh_time = int(load_config(".mails")["refresh_time"]) * 1000
-
 root.after(refresh_time, on_refresh_timer_timeout)
+
 tab_bysender = TabBySender(client_socket, notebook, mails, user_info)
 tab_all = TabAll(client_socket, notebook, mails, user_info)
 

@@ -2,14 +2,24 @@ import tkinter as tk
 from tkinter import filedialog
 from mail_client_smtp_func import *
 from typing import List
+import os
 import subprocess
 import time
 
 def browse_file(file_paths : List[str]):
     path = filedialog.askopenfilename(initialdir="/", title="Select File", filetypes=(("Text files", "*.txt"), ("All files", "*.*"))) 
-    if file_paths.count(path) == 0:
-      file_paths.append(path)
-     
+    if file_paths.count(path) > 0:
+        return
+    
+    file_paths.append(path)
+    file_size = os.stat(path).st_size
+    total_size = 0
+    for fp in file_paths:
+        total_size += os.stat(path).st_size
+    
+    if total_size + file_size > 3145728:
+        return
+
     # Hiện tên file được chọn
     f_paths_str = ','.join(basename(f) for f in file_paths)
     tk.Label(window, text = " Selected files: %s" % f_paths_str).grid(row = 10, column = 1, sticky="w")
