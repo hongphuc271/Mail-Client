@@ -83,9 +83,9 @@ def get_full_parsed_message(msg_as_string : str) -> str:
     parsed_data = parse_message(msg_as_string)
     msg = parsed_data[0] + parsed_data[1]
     if parsed_data[2] > 1:
-        msg += "\nThere are " + parsed_data[2] + " messages"
+        msg += "\nThere are " + str(parsed_data[2]) + " attachments"
     elif parsed_data[2] == 1:
-        msg += "\nThere is 1 message"
+        msg += "\nThere is 1 attachment"
     return msg
 
 # Hàm phân tích dữ liệu từ email chuỗi
@@ -107,15 +107,16 @@ def parse_message(msg_as_string : str) -> (str, str, int):
     if msg.is_multipart():
         for part in msg.walk():
             content_type : str = part.get_content_type()
+            print(content_type)
             if content_type == "text/plain":
                 out_msg[1] += "\n\n" + part.get_payload(decode=True).decode()
-            elif content_type.startswith("multipart"):
+            elif content_type.startswith("application"):
                 attachent_count += 1
     else:
         out_msg[1] += "\n\n" + msg.get_payload(decode=True).decode()
     ####
         
-    out_msg[2] += attachent_count
+    out_msg[2] = attachent_count
 
     return tuple(out_msg)
 
@@ -189,6 +190,23 @@ def save_config(folder_path : str, cfg_parameters : dict):
     with open(folder_path + "/" + 'config.cfg', 'w') as configfile:
         config.write(configfile)
 
+def save_default_config(folder_path : str):
+    save_config(".mails",
+                {"General" :
+                    {
+                        "mail_server_address" : "127.0.0.1",
+                        "smtp_port" : "2225",
+                        "pop3_port" : "3335",
+                        "refresh_time" : 5
+                    },
+                "Filter" : {
+                        "Project" : "person1@test.net, person2@test.net",
+                        "Important" : "urgent, ASAP",
+                        "Work" : "report, meeting",
+                        "Spam" : "virus, hack, crack",
+                    }
+                })
+
 def load_config(folder_path : str) -> dict:
     config = configparser.ConfigParser()
 
@@ -213,25 +231,84 @@ def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
     new_msg.tags.append("sender:" + sender)
 
     #Thêm tag xác định thư mục
-    folders = []
+    folders = ["inbox"]
     subject = msg["Subject"]
     content = parse_message(msg_as_string)[1]
 
-    cfg_filters : dict = load_config(".mails").get("Filters", {})
+    cfg_filters : dict = load_config(".mails").get("Filter", {})
 
     while(cfg_filters != {}):
-        if any(key in content for key in cfg_filters["Spam"].split(", ")):
-            folders.append("Spam")
+        if any(key in content for key in cfg_filters["spam"].split(", ")):
+            folders.append("spam")
             break
-        if sender in cfg_filters["Project"].split(", "):
-            folders.append("Project")
-        if any(key in subject for key in cfg_filters["Important"].split(", ")):
-            folders.append("Important")
-        if any(key in content for key in cfg_filters["Work"].split(", ")):
-            folders.append("Work")
+        if sender in cfg_filters["project"].split(", "):
+            folders.append("project")
+        if any(key in subject for key in cfg_filters["important"].split(", ")):
+            folders.append("important")
+        if any(key in content for key in cfg_filters["work"].split(", ")):
+            folders.append("work")
         break
 
     if len(folders) > 0:
         new_msg.tags.append("folder:" + ','.join(folders))
 
     return new_msg
+
+def initiate(address : tuple) -> socket:
+	client_socket = socket(AF_INET, SOCK_STREAM)
+	client_socket.connect(address)
+	client_socket.recv(1024)
+	return client_socket
+
+def send_mail(client_socket : socket, from_user : str, to_user : str, cc_users : str, bcc_users : str, subject : str, message : str, attachment_paths : List[str] = []):
+	helo_command : str = 'HELO ' + client_socket.getsockname()[0] + '\r\n'
+	client_socket.send(helo_command.encode())
+	client_socket.recv(1024)
+
+	mailfrom_command : str = 'MAIL FROM: %s\r\n' % from_user
+	client_socket.send(mailfrom_command.encode())
+	client_socket.recv(1024)
+
+	rcptto_command : str = 'RCPT TO: %s\r\n' % to_user
+	client_socket.send(rcptto_command.encode())
+	client_socket.recv(1024)
+
+	for ucc in cc_users.split(','):
+		cc_rcptto_command : str = 'RCPT TO: %s\r\n' % ucc
+		client_socket.send(cc_rcptto_command.encode())
+		client_socket.recv(1024)
+
+	for ubcc in bcc_users.split(','):
+		bcc_rcptto_command : str = 'RCPT TO: %s\r\n' % ubcc
+		client_socket.send(bcc_rcptto_command.encode())
+		client_socket.recv(1024)
+	
+	data_command = 'DATA\r\n'
+	client_socket.send(data_command.encode())
+	client_socket.recv(1024)
+
+	#Refs: https://stackoverflow.com/questions/3362600/how-to-send-email-attachments
+	msg = MIMEMultipart()
+	msg['From'] = from_user
+	msg['To'] = to_user
+	msg['Date'] = formatdate(localtime=True)
+	msg['Subject'] = subject
+	msg['Cc'] = cc_users
+	msg['Bcc'] = bcc_users
+	msg['Message-ID'] = str(time()) + "@" + from_user.split("@", 1)[1]
+
+	msg.attach(MIMEText(message))
+
+	for f in attachment_paths or []:
+		with open(f, 'rb') as fil:
+			fil = open(f, "rb")
+			part = MIMEApplication(fil.read(), Name=basename(f))
+		part['Content-Disposition'] = 'attachment; filename="%s"' % basename(f)
+		msg.attach(part)
+
+	client_socket.send(msg.as_string().encode())
+	####
+
+	end_message = '\r\n.\r\n'
+	client_socket.send(end_message.encode())
+	client_socket.recv(1024)

@@ -5,6 +5,99 @@ from typing import Type, List
 from socket import *
 import os
 from tkinter import Scrollbar
+import subprocess
+
+class MailApplication:
+    def __init__(self, root: tk.Tk):
+        self.root = root
+        self.user_info = ()
+
+    def on_refresh_timer_timeout(self):
+        get_messages(self.client_socket, self.mails, self.user_info[0])
+        self.tab_bysender.update_message_display()
+        self.tab_byfolder.update_message_display()
+        self.tab_all.update_message_display()
+        print("Refreshed")
+        self.root.after(self.refresh_time, self.on_refresh_timer_timeout)
+
+    def reset_refresh_timer(self):
+        self.root.after_cancel(self.refresh_timer)
+
+    def run(self):
+        #Chuẩn bị file config
+        if not has_config(".mails"):
+            save_default_config(".mails")
+        cfg = load_config(".mails")
+
+		#Chạy mail server
+        run_command = "java -jar test-mail-server-1.0.jar -s 2225 -p 3335 -m .test-mail-server/"
+        process = subprocess.Popen(run_command, shell=True)
+        time.sleep(2.0)
+        
+        # key : str = uidl, value : MailMessage
+        self.mails : dict = {}
+
+		#Khởi tạo socket và kết nối tới mail server
+        self.mail_server = (cfg["General"]["mail_server_address"], int(cfg["General"]["pop3_port"]))
+        #self.user_info = ("person1@test.net", "person1")
+        self.client_socket : socket = sign_in(self.mail_server, self.user_info)
+
+        # Tạo đối tượng Notebook để chứa các tab
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
+
+        ## Tạo tab "User"
+        #self.tab_user = ttk.Frame(self.notebook)
+        #self.notebook.add(self.tab_user, text="User")
+
+        load_messages(self.mails, self.user_info[0])
+
+        #Tạo timer refresh
+        self.refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
+        self.refresh_timer = self.root.after(self.refresh_time, self.on_refresh_timer_timeout)
+
+        self.tab_newmessage = TabNewMessage(self)
+        self.tab_all = TabAll(self)
+        self.tab_bysender = TabBySender(self)
+        self.tab_byfolder = TabByFolder(self)
+
+class UserWindow:
+    def __init__(self, root : tk.Tk, mail_app : MailApplication):
+        self.root = root
+        self.mail_app = mail_app
+
+    def on_sign_in_clicked(self):
+        # Lưu thông tin đăng nhập
+        username = self.username_entry.get()
+        password = self.password_entry.get()
+        self.mail_app.user_info = (username, password)
+
+        # Ẩn Frame đăng nhập
+        self.login_frame.pack_forget()
+        
+        #Chạy giao diện chính
+        self.mail_app.run()
+
+    def run(self):
+        # Tạo Frame cho cửa sổ đăng nhập
+        self.login_frame = tk.Frame(self.root)
+        self.login_frame.pack(padx=50, pady=50)
+
+        # Tạo các widget cho Frame đăng nhập
+        self.username_label = tk.Label(self.login_frame, text="Username:")
+        self.username_label.pack(pady=10)
+
+        self.username_entry = tk.Entry(self.login_frame)
+        self.username_entry.pack(pady=10)
+
+        self.password_label = tk.Label(self.login_frame, text="Password:")
+        self.password_label.pack(pady=10)
+
+        self.password_entry = tk.Entry(self.login_frame, show="*")
+        self.password_entry.pack(pady=10)
+
+        self.sign_in_button = tk.Button(self.login_frame, text="Sign In", command=self.on_sign_in_clicked)
+        self.sign_in_button.pack(pady=20)
 
 def get_messages(client_socket : socket, mails : dict, user_name : str):
     msg_count = get_message_count(client_socket)
@@ -25,15 +118,19 @@ def get_messages(client_socket : socket, mails : dict, user_name : str):
     if has_new_messages:
         save_all_mails(mails, ".mails/" + user_name)
 
+    return has_new_messages
+
 def load_messages(mails : dict, user_name : str):
     load_all_mails(mails, ".mails/" + user_name)
 
 class TabAll:
-    def __init__(self, client_socket : socket, notebook : ttk.Notebook, mails : dict, user_info : tuple):
-        self.client_socket = client_socket
-        self.notebook = notebook
-        self.mails = mails
-        self.user_info = user_info
+    def __init__(self, mail_app : MailApplication):
+        self.client_socket = mail_app.client_socket
+        self.notebook = mail_app.notebook
+        self.mails = mail_app.mails
+        self.user_info = mail_app.user_info
+        self.root = mail_app.root
+        self.mail_app = mail_app
 
         self.run()
 
@@ -103,12 +200,14 @@ class TabAll:
         self.tab_all.rowconfigure(1, weight=1)
 
 class TabBySender:
-    def __init__(self, client_socket : socket, notebook : ttk.Notebook, mails : dict, user_info : tuple):
-        self.client_socket = client_socket
-        self.notebook = notebook
-        self.mails = mails
-        self.user_info = user_info
+    def __init__(self, mail_app : MailApplication):
+        self.client_socket = mail_app.client_socket
+        self.notebook = mail_app.notebook
+        self.mails = mail_app.mails
+        self.user_info = mail_app.user_info
         self.current_section = ""
+        self.root = mail_app.root
+        self.mail_app = mail_app
 
         self.run()
 
@@ -223,12 +322,14 @@ class TabBySender:
         self.tab_bysender.rowconfigure(1, weight=1)
 
 class TabByFolder:
-    def __init__(self, client_socket : socket, notebook : ttk.Notebook, mails : dict, user_info : tuple):
-        self.client_socket = client_socket
-        self.notebook = notebook
-        self.mails = mails
-        self.user_info = user_info
+    def __init__(self,  mail_app : MailApplication):
+        self.client_socket = mail_app.client_socket
+        self.notebook = mail_app.notebook
+        self.mails =mail_app. mails
+        self.user_info = mail_app.user_info
         self.current_section = ""
+        self.root = mail_app.root
+        self.mail_app = mail_app
 
         self.run()
 
@@ -242,7 +343,7 @@ class TabByFolder:
         if selected_item != ():
             self.message_listbox.delete(0, self.message_listbox.size()-1)
             
-            current_folder = self.folder_listbox.get(selected_item[0])
+            current_folder = self.folder_listbox.get(selected_item[0]).lower()
             self.choose_folder(current_folder)
             self.current_section = current_folder
     
@@ -293,7 +394,7 @@ class TabByFolder:
                     display_folders[f] = [m]
 
         for f in list(display_folders.keys()):
-            self.folder_listbox.insert(tk.END, f)
+            self.folder_listbox.insert(tk.END, f.capitalize())
 
         self.choose_folder(self.current_section)
 
@@ -340,3 +441,101 @@ class TabByFolder:
         # Thiết lập trọng số của cột và hàng để có thể mở rộng
         self.tab_byfolder.columnconfigure(2, weight=1)
         self.tab_byfolder.rowconfigure(1, weight=1)
+
+class TabNewMessage:
+    def __init__(self, mail_app : MailApplication):
+        self.notebook = mail_app.notebook
+        self.mails = mail_app.mails
+        self.user_info = mail_app.user_info
+        self.current_section = ""
+        self.root = mail_app.root
+        self.mail_app = mail_app
+
+        self.run()
+
+    def keep_connection_alive(self):
+        noop_command = "NOOP\r\n"
+        self.client_socket.send(noop_command.encode())
+        self.client_socket.recv(1024)
+        self.tab_newmessage.after(5000, self.keep_connection_alive)
+
+    def browse_file(self, file_paths : List[str]):
+        path = filedialog.askopenfilename(initialdir="/", title="Select File", filetypes=(("Text files", "*.txt"), ("All files", "*.*"))) 
+        if file_paths.count(path) > 0:
+            return
+    
+        file_paths.append(path)
+        file_size = os.stat(path).st_size
+        total_size = 0
+        for fp in file_paths:
+            total_size += os.stat(path).st_size
+    
+        if total_size + file_size > 3145728:
+            return
+
+        # Hiện tên file được chọn
+        f_paths_str = ','.join(basename(f) for f in file_paths)
+        tk.Label(self.tab_newmessage, text = " Selected files: %s" % f_paths_str).grid(row = 10, column = 1, sticky="w")
+
+    def run(self):
+        #Load file config
+        cfg = load_config(".mails")
+    
+        # Tạo socket và thiết lập lết nối tới mailsever
+        mailserver = (cfg["General"]["mail_server_address"], int(cfg["General"]["smtp_port"]))
+        self.client_socket = initiate(mailserver)
+
+        helo_command : str = 'HELO ' + self.client_socket.getsockname()[0] + '\r\n'
+        self.client_socket.send(helo_command.encode())
+        self.client_socket.recv(1024)
+
+        # Tạo tab NewMessage
+        self.tab_newmessage = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab_newmessage, text="New")
+    
+        # Tạo các nhãn và ô chỉnh sửa
+        tk.Label(self.tab_newmessage, text="From:").grid(row=0, column=0, sticky="e")
+        from_entry = tk.Entry(self.tab_newmessage)
+        from_entry.grid(row=0, column=1, columnspan=2, sticky="we")
+
+        tk.Label(self.tab_newmessage, text="To:").grid(row=1, column=0, sticky="e")
+        to_entry = tk.Entry(self.tab_newmessage)
+        to_entry.grid(row=1, column=1, columnspan=2, sticky="we")
+
+        tk.Label(self.tab_newmessage, text="Cc:").grid(row=2, column=0, sticky="e")
+        cc_entry = tk.Entry(self.tab_newmessage)
+        cc_entry.grid(row=2, column=1, columnspan=2, sticky="we")
+
+        tk.Label(self.tab_newmessage, text="Bcc:").grid(row=3, column=0, sticky="e")
+        bcc_entry = tk.Entry(self.tab_newmessage)
+        bcc_entry.grid(row=3, column=1, columnspan=2, sticky="we")
+
+        tk.Label(self.tab_newmessage, text="Subject:").grid(row=4, column=0, sticky="e")
+        subject_entry = tk.Entry(self.tab_newmessage)
+        subject_entry.grid(row=4, column=1, columnspan=2, sticky="we")
+
+        tk.Label(self.tab_newmessage, text="").grid(row=4, column=0, sticky="e")
+        message_entry = tk.Text(self.tab_newmessage, height=10, width=40)
+        message_entry.grid(row=5, column=1, columnspan=2, sticky="we")
+
+        # Tạo nút "Browse" để chọn file đính kèm
+        file_paths = []
+        browse_button = tk.Button(self.tab_newmessage, text="Browse", command=lambda: self.browse_file(file_paths))
+        browse_button.grid(row=10, column=0, pady=10)
+
+        # Tạo nút "Send"
+        send_button = tk.Button(self.tab_newmessage, text="Send",
+                                command=lambda: send_mail(
+                                    self.client_socket,
+                                    from_entry.get(),
+                                    to_entry.get(),
+                                    cc_entry.get(),
+                                    bcc_entry.get(),
+                                    subject_entry.get(),
+                                    message_entry.get("1.0", "end-1c"),
+                                    file_paths
+                                    )
+                                )
+        send_button.grid(row=12, column=1, columnspan=2, pady=10)
+
+        self.tab_newmessage.after(5000, self.keep_connection_alive)

@@ -1,6 +1,6 @@
 20231205071034705.msg
-1
-sender:sender@test.net;folder:Important
+0
+sender:sender@test.net;folder:inbox,important
 Content-Type: multipart/mixed; boundary="===============7324823796508320313=="
 MIME-Version: 1.0
 From: sender@test.net

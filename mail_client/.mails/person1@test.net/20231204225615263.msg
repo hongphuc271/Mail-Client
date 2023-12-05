@@ -1,6 +1,6 @@
 20231204225615263.msg
-1
-sender:sender@test.net;folder:Spam
+0
+sender:sender@test.net;folder:inbox,spam
 Content-Type: multipart/mixed; boundary="===============5956465800476940971=="
 MIME-Version: 1.0
 From: sender@test.net
