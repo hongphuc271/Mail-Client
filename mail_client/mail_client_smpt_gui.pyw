@@ -6,6 +6,12 @@ import os
 import subprocess
 import time
 
+def keep_connection_alive():
+    noop_command = "NOOP\r\n"
+    client_socket.send(noop_command.encode())
+    client_socket.recv(1024)
+    window.after(5000, keep_connection_alive)
+
 def browse_file(file_paths : List[str]):
     path = filedialog.askopenfilename(initialdir="/", title="Select File", filetypes=(("Text files", "*.txt"), ("All files", "*.*"))) 
     if file_paths.count(path) > 0:
@@ -32,6 +38,10 @@ time.sleep(2.0)
 # Tạo socket và thiết lập lết nối tới mailsever
 mailserver = ("127.0.0.1", 2225)
 client_socket = initiate(mailserver)
+
+helo_command : str = 'HELO ' + client_socket.getsockname()[0] + '\r\n'
+client_socket.send(helo_command.encode())
+client_socket.recv(1024)
 
 # Tạo cửa sổ
 window = tk.Tk()
@@ -81,6 +91,8 @@ send_button = tk.Button(window, text="Send",
                             )
                         )
 send_button.grid(row=12, column=1, columnspan=2, pady=10)
+
+window.after(5000, keep_connection_alive)
 
 # Main loop
 window.mainloop()
