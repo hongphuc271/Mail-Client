@@ -17,8 +17,9 @@ class MailApplication:
         self.tab_bysender.update_message_display()
         self.tab_byfolder.update_message_display()
         self.tab_all.update_message_display()
-        print("Refreshed")
-        self.root.after(self.refresh_time, self.on_refresh_timer_timeout)
+        refresh_time = int(load_config(".mails")["General"]["refesh_time"]) * 1000
+        print("Refreshed: ", refresh_time)
+        refresh_timer = self.root.after(refresh_time, on_refresh_timer_timeout)
 
     def reset_refresh_timer(self):
         self.root.after_cancel(self.refresh_timer)
@@ -27,6 +28,7 @@ class MailApplication:
         #Chuẩn bị file config
         if not has_config(".mails"):
             save_default_config(".mails")
+            #print("Write new config")
         cfg = load_config(".mails")
 
 		#Chạy mail server
@@ -53,8 +55,9 @@ class MailApplication:
         load_messages(self.mails, self.user_info[0])
 
         #Tạo timer refresh
-        self.refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
-        self.refresh_timer = self.root.after(self.refresh_time, self.on_refresh_timer_timeout)
+        refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
+        #print("Refresh time: ", self.refresh_time)
+        self.refresh_timer = self.root.after(refresh_time, self.on_refresh_timer_timeout)
 
         self.tab_newmessage = TabNewMessage(self)
         self.tab_all = TabAll(self)
@@ -65,6 +68,7 @@ class UserWindow:
     def __init__(self, root : tk.Tk, mail_app : MailApplication):
         self.root = root
         self.mail_app = mail_app
+        self.run()
 
     def on_sign_in_clicked(self):
         # Lưu thông tin đăng nhập
@@ -457,7 +461,8 @@ class TabNewMessage:
         noop_command = "NOOP\r\n"
         self.client_socket.send(noop_command.encode())
         self.client_socket.recv(1024)
-        self.tab_newmessage.after(5000, self.keep_connection_alive)
+        keep_alive_time = int(load(".mails")["General"]["keep_alive_time"]) * 1000
+        self.tab_newmessage.after(keep_alive_time, self.keep_connection_alive)
 
     def browse_file(self, file_paths : List[str]):
         path = filedialog.askopenfilename(initialdir="/", title="Select File", filetypes=(("Text files", "*.txt"), ("All files", "*.*"))) 
@@ -493,11 +498,11 @@ class TabNewMessage:
         self.tab_newmessage = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_newmessage, text="New")
     
-        # Tạo các nhãn và ô chỉnh sửa
-        tk.Label(self.tab_newmessage, text="From:").grid(row=0, column=0, sticky="e")
-        from_entry = tk.Entry(self.tab_newmessage)
-        from_entry.grid(row=0, column=1, columnspan=2, sticky="we")
+        #tk.Label(self.tab_newmessage, text="From:").grid(row=0, column=0, sticky="e")
+        #from_entry = tk.Entry(self.tab_newmessage)
+        #from_entry.grid(row=0, column=1, columnspan=2, sticky="we")
 
+        # Tạo các nhãn và ô chỉnh sửa
         tk.Label(self.tab_newmessage, text="To:").grid(row=1, column=0, sticky="e")
         to_entry = tk.Entry(self.tab_newmessage)
         to_entry.grid(row=1, column=1, columnspan=2, sticky="we")
@@ -527,7 +532,7 @@ class TabNewMessage:
         send_button = tk.Button(self.tab_newmessage, text="Send",
                                 command=lambda: send_mail(
                                     self.client_socket,
-                                    from_entry.get(),
+                                    self.user_info[0],
                                     to_entry.get(),
                                     cc_entry.get(),
                                     bcc_entry.get(),
@@ -538,4 +543,5 @@ class TabNewMessage:
                                 )
         send_button.grid(row=12, column=1, columnspan=2, pady=10)
 
-        self.tab_newmessage.after(5000, self.keep_connection_alive)
+        keep_alive_time = int(load_config(".mails")["General"]["keep_alive_time"]) * 1000
+        self.tab_newmessage.after(keep_alive_time, self.keep_connection_alive)

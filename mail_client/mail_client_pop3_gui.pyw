@@ -7,9 +7,9 @@ import time
 root = tk.Tk()
 root.title("Mail Client")
 root.geometry("600x480")
-root.wm_attributes("-topmost", True)
+#root.wm_attributes("-topmost", True)
 mail_app = MailApplication(root)
 sign_in = UserWindow(root, mail_app)
-sign_in.run()
+
 # Bắt đầu vòng lặp sự kiện
 root.mainloop()
