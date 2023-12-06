@@ -1,6 +1,7 @@
 import tkinter as tk
 from mail_client_pop3_func import *
 from tkinter import ttk
+from tkinter import filedialog
 from typing import Type, List
 from socket import *
 import os
@@ -17,9 +18,9 @@ class MailApplication:
         self.tab_bysender.update_message_display()
         self.tab_byfolder.update_message_display()
         self.tab_all.update_message_display()
-        refresh_time = int(load_config(".mails")["General"]["refesh_time"]) * 1000
+        refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
         print("Refreshed: ", refresh_time)
-        refresh_timer = self.root.after(refresh_time, on_refresh_timer_timeout)
+        refresh_timer = self.root.after(refresh_time, self.on_refresh_timer_timeout)
 
     def reset_refresh_timer(self):
         self.root.after_cancel(self.refresh_timer)
@@ -32,7 +33,7 @@ class MailApplication:
         cfg = load_config(".mails")
 
 		#Chạy mail server
-        run_command = "java -jar test-mail-server-1.0.jar -s 2225 -p 3335 -m .test-mail-server/"
+        run_command = "java -jar test-mail-server-1.0.jar -s %s -p %s -m .test-mail-server/" % (cfg["General"]["smtp_port"], cfg["General"]["pop3_port"])
         process = subprocess.Popen(run_command, shell=True)
         time.sleep(2.0)
         
@@ -461,7 +462,7 @@ class TabNewMessage:
         noop_command = "NOOP\r\n"
         self.client_socket.send(noop_command.encode())
         self.client_socket.recv(1024)
-        keep_alive_time = int(load(".mails")["General"]["keep_alive_time"]) * 1000
+        keep_alive_time = int(load_config(".mails")["General"]["keep_alive_time"]) * 1000
         self.tab_newmessage.after(keep_alive_time, self.keep_connection_alive)
 
     def browse_file(self, file_paths : List[str]):

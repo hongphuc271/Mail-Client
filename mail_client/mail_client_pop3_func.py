@@ -201,7 +201,8 @@ def save_default_config(folder_path : str):
                         "mail_server_address" : "127.0.0.1",
                         "smtp_port" : "2225",
                         "pop3_port" : "3335",
-                        "refresh_time" : 5
+                        "refresh_time" : 10,
+                        "keep_alive_time" : 12,
                     },
                 "Filter" : {
                         "Project" : "person1@test.net, person2@test.net",
