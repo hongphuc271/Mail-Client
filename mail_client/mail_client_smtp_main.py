@@ -18,5 +18,6 @@ if not has_config(".mails"):
 
 cfg = load_config(".mails")    
 
+login_window(cfg)
 app(cfg)
 

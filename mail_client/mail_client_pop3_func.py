@@ -1,4 +1,5 @@
-﻿from socket import *
+﻿from json import load
+from socket import *
 from typing import List
 import email
 import os
@@ -193,14 +194,19 @@ def save_config(folder_path : str, cfg_parameters : dict):
         os.makedirs(folder_path)
     
     config = configparser.ConfigParser()
+    config_copy = load_config(folder_path)
+    
+    for section in config_copy:
+        config[section] = config_copy[section]
 
     # Thêm các giá trị vào file cấu hình
-    #for section in cfg_parameters.keys():
-     #   config[section] = cfg_parameters.get(section, {})
+    for section in cfg_parameters.keys():
+        config[section] = cfg_parameters.get(section, {})
     
-    for section, parameters in cfg_parameters.items():
-        config[section] = parameters
+    #for section, parameters in cfg_parameters.items():
+    #    config[section] = parameters
 
+    print(config)
     # Lưu file cấu hình
     with open(folder_path + "/" + 'config.cfg', 'w') as configfile:
         config.write(configfile)
@@ -218,11 +224,17 @@ def save_default_config(folder_path : str):
                         "keep_alive_time" : 12,
                     },
                 "Filter" : {
+                        "List" : "all project important work spam",
                         "Project" : "person1@test.net, person2@test.net",
                         "Important" : "urgent, ASAP",
                         "Work" : "report, meeting",
                         "Spam" : "virus, hack, crack",
-                    }  
+                    },
+                    
+                "User" : {
+                        "Name" : "inbox@testmail.net",
+                        "Pass" : "12345"
+                    }
                 })
 
 

@@ -27,7 +27,8 @@ def app(cfg):
     smtp_addr = (cfg["General"]["mail_server_address"], int(cfg["General"]["pop3_port"]))
     pop3_addr = (cfg["General"]["mail_server_address"], int(cfg["General"]["pop3_port"]))
 
-    user = ["inbox@testmail.net", "testpass"]
+    user = [cfg["User"]["Username"], cfg["User"]["Password"]]
+    pop3_socket = sign_in(pop3_addr, user)
     
     mails : dict = {}
     
@@ -52,14 +53,14 @@ def app(cfg):
     newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 3, sticky= "NWE")
     hoverBind(newMailButton, BLUE_DARKEN)
        
-    refreshButton = tk.Button(sideBar, text = "refresh", command = lambda: { get_messages(pop3_addr, mails, user), load_all_mails(mails, ".mails/" + user[0]), inbox(mailbox, emptySpace, mails, user[0])}, bd =2, bg=BLUE, padx= 20, pady = 8, cursor= "exchange")
+    refreshButton = tk.Button(sideBar, text = "refresh", command = lambda: { get_messages(pop3_socket, mails, user), load_all_mails(mails, ".mails/" + user[0]), inbox(mailbox, emptySpace, mails, user[0])}, bd =2, bg=BLUE, padx= 20, pady = 8, cursor= "exchange")
     refreshButton.grid(row= 1, column = 0, columnspan = 1, sticky= "NWE")
     hoverBind(refreshButton, BLUE_DARKEN)
     
     filter_label = tk.Label(sideBar, text = "Filter: ", bg = GOLD)
     filter_label.grid(row = 1, column = 1, sticky = "NSWE")
 
-    filter_list = ["all", "important", "junk"]
+    filter_list = cfg["Filter"]["List"]
     filterButton = ttk.Combobox(sideBar, values=filter_list)
     filterButton.set("all")
     filterButton.bind("<<ComboboxSelected>>", on_change_filter)
@@ -78,30 +79,32 @@ def app(cfg):
     mailScroll.grid(row = 3, column = 2, sticky = "NSE")
     mailbox_canvas.create_window((0, 0), window=mailbox, anchor="nw")
     
-    mailbox.bind("<Configure>", lambda event, canvas=mailbox_canvas: onFrameConfigure(canvas))
+    mailbox.bind("<Configure>", lambda event, canvas = mailbox_canvas: onFrameConfigure(canvas))
     
-    get_messages(pop3_addr, mails, user)
+    get_messages(pop3_socket, mails, user[0])
     load_all_mails(mails, ".mails/" + user[0])
     inbox(mailbox, emptySpace, mails, user[0])
 
     sideBar.grid(row=0 ,column= 0, ipadx= 2)
-    sideBar.update_idletasks()
+    #sideBar.update_idletasks()
     
     refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
-    window.after(refresh_time, lambda: on_refresh_timer_timeout(window, refresh_time, mails, emptySpace, mail))
+    window.after(refresh_time, lambda: on_refresh_timer_timeout(window, refresh_time, mails, emptySpace, mailbox, pop3_socket))
     window.mainloop()
 
 def on_change_filter(event):
     pass
 
+# để canvas cuộn được
 def onFrameConfigure(canvas):
     canvas.configure(scrollregion=canvas.bbox("all"))
 
+
 def hoverBind(widget, color: str):
     original_color = widget.cget("bg")
-    widget.bind("<Enter>", lambda event: on_enter(event, color))
-    widget.bind("<Leave>", lambda event: on_leave(event, original_color))
-
+    widget.bind("<Enter>", lambda event: on_enter(event, color))# đổi màu widget khi con chuột chỉ vào
+    widget.bind("<Leave>", lambda event: on_leave(event, original_color))# đổi màu widget khi con chuột thoát ra
+    
 def showMTSpace(emptySpace):
     emptySpace.grid(row = 0, column= 2)
 
@@ -138,7 +141,7 @@ def inbox(window : tk.Frame, mts : tk.Frame, mails : dict, username:str):
             
         tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["Subject"], bg =WHITE).grid(row = 1, column = 0, sticky = "nw")
         item.grid(row = i, column = 0, sticky = "N", ipady= 2)
-        item.bind("<Button-1>", lambda event ,mts=mts, mail = mails[msg_uidl]: { readMail(event, mts, mail, username), showMTSpace(mts) })
+        item.bind("<Button-1>", lambda event ,mts=mts, mail = mails[msg_uidl]: { readMail(event, mts, mail, username), showMTSpace(mts), configRead(mail)})
         hoverBind(item, WHITE_DARKEN)
         window.insert(tk.END, item)
         i = i+1
@@ -186,6 +189,11 @@ def readMail(event ,window, mail: dict, username: str):
     file_link.bind("<Button-1>", lambda event: open_file(mail.uidl , username))
     hoverBind(file_link, WHITE_DARKEN)
     
+
+def configRead(mail: dict):
+    if mail.read == False:
+        mail.read = True
+        save_changes_to_mail(mail, ".mails/" + load_config(".mails")["User"]["Name"])
 
 
 def open_file(m_uidl, username):
@@ -287,8 +295,8 @@ def browse_file( file_paths : List[str], window):
     f_paths_str = ','.join(basename(f) for f in file_paths)
     tk.Label(window, text = " Selected files: %s" % f_paths_str).grid(row = 10, column = 1, sticky="w")
     
-def get_messages(pop3_addr: tuple, mails : dict, user):
-    client_socket = sign_in(pop3_addr, user) 
+
+def get_messages(client_socket: socket, mails : dict, user_name : str):
 
     msg_count = get_message_count(client_socket)
     uidl_list = get_uidl_list(client_socket)
@@ -301,25 +309,24 @@ def get_messages(pop3_addr: tuple, mails : dict, user):
             continue
         has_new_messages = True
         msg_as_string = retrieve_message_as_string(client_socket, i+1)
-        sender = email.message_from_string(msg_as_string)["From"]
-        if sender is None:
-            sender = "Unknown"
-        mails[msg_uidl] = MailMessage(msg_as_string, ["sender:" + sender], msg_uidl, False)
+        
+        mails[msg_uidl] = create_new_message(msg_uidl, msg_as_string)
+        #mails[msg_uidl] = MailMessage(msg_as_string, ["sender:" + sender], msg_uidl, False)
      
     if has_new_messages:
-        save_all_mails(mails, ".mails/" + user[0])
+        save_all_mails(mails, ".mails/" + user_name)
 
-def on_refresh_timer_timeout(window, refresh_time, mails: dict, empty_space, mailbox):
-    pop3_addr = (int(load_config(".mails")["General"]["mail_server_address"]), int(load_config(".mails")["General"]["pop3_port"]))  
+def on_refresh_timer_timeout(window, refresh_time, mails: dict, empty_space, mailbox, client_socket: socket):
+      
     user = load_config(".mails")["User"]["name"]
     
-    get_messages(pop3_addr, mails, user)
+    get_messages(client_socket, mails, user)
     load_all_mails(mails, ".mails/" + user)
     inbox(mailbox, empty_space, mails, user)
         
     refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
     print("Refreshed: ", refresh_time)
-    window.after(refresh_time, lambda: on_refresh_timer_timeout(window, refresh_time, mails, empty_space, mailbox))
+    window.after(refresh_time, lambda: on_refresh_timer_timeout(window, refresh_time, mails, empty_space, mailbox, client_socket))
         
 
 def keep_connection_alive(client_socket, window, keep_alive_time):
@@ -327,3 +334,36 @@ def keep_connection_alive(client_socket, window, keep_alive_time):
     client_socket.send(noop_command.encode())
     client_socket.recv(1024)
     window.after(keep_alive_time * 1000, keep_connection_alive)
+    
+
+def login_window(config):
+     
+    window = tk.Tk()
+    window.geometry("400x100")
+    tk.Label(text = "Username").grid(row = 0, column= 0)
+    tk.Label(text = "Password").grid(row = 1, column= 0)
+    username = tk.Entry(window)
+    password = tk.Entry(window)
+    submit = tk.Button(text = "sign in", command= lambda: { get_user(username.get(), password.get()), window.destroy() })
+    submit.grid(row = 2, column= 0, columnspan= 2, sticky = "NW")
+    
+    username.grid(row=0, column= 1)
+    password.grid(row=1, column= 1)
+    
+    if "User" in load_config(".mails"):
+        username = config["User"].get("Username", "Unknown")
+        auto_signin = tk.Button(window, text=f"Sign in as {username}", command=lambda: window.destroy())
+        auto_signin.grid(row = 0, column = 2)
+
+    window.mainloop()     
+
+def get_user(username:str, password: str):
+    save_config(".mails",
+                {"User" :
+                    {
+                        "Username" : username,
+                        "Password" : password,
+                    }
+                }
+               )
+     

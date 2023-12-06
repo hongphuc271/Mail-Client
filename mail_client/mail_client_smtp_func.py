@@ -16,7 +16,7 @@ def initiate(address : tuple) -> socket:
 
 def send_mail(client_socket : socket, from_user : str, to_user : str, cc_users : str, bcc_users : str, subject : str, message : str, attachment_paths : List[str] = []):
     #print("To: ", to_user=="")
-    if to_user == "" and cc == [] and bcc == []:
+    if to_user == "" and cc_users == [] and bcc_users == []:
         return
     helo_command : str = 'HELO ' + client_socket.getsockname()[0] + '\r\n'
     client_socket.send(helo_command.encode())
