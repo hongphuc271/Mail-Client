@@ -1,6 +1,8 @@
-﻿from cProfile import label
+﻿from ast import Lambda
+from cProfile import label
 import email
 from email.iterators import body_line_iterator
+from json import load
 from logging import warning
 import mailbox
 from pickle import FALSE
@@ -33,7 +35,10 @@ TEXT_READ = "#8c2ce6"
 
 
 
-def app(smtp_addr: tuple, pop3_addr: tuple):
+def app(cfg):
+    smtp_addr = (cfg["General"]["mail_server_address"], int(cfg["General"]["smtp_port"]))
+    pop3_addr = (cfg["General"]["mail_server_address"], int(cfg["General"]["pop3_port"]))
+
     user = ["inbox@testmail.net", "testpass"]
     
     mails : dict = {}
@@ -94,6 +99,8 @@ def app(smtp_addr: tuple, pop3_addr: tuple):
     sideBar.grid(row=0 ,column= 0, ipadx= 2)
     sideBar.update_idletasks()
     
+    refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
+    window.after(refresh_time, lambda: on_refresh_timer_timeout(window, refresh_time, mails, emptySpace, mail))
     window.mainloop()
 
 def on_change_filter(event):
@@ -208,6 +215,8 @@ def open_file(m_uidl, username):
 
 def draft(window, smpt_addr, user_name):
     destroy_all_widgets(window)
+    client_socket = initiate(smpt_addr)    
+
     # Tạo các nhãn và ô chỉnh sửa
     tk.Label(window, text="From: ").grid(row=0, column=0, sticky="e")
     tk.Label(window, text = user_name, anchor= "w").grid(row = 0, column = 1, sticky= "we")
@@ -241,8 +250,8 @@ def draft(window, smpt_addr, user_name):
 
     # Tạo nút "Send"
     send_button = tk.Button(window, text="Send",
-                            command=lambda: sendMail(
-                                smpt_addr,
+                            command=lambda: send_mail(
+                                client_socket,
                                 user_name,
                                 to_entry.get(),
                                 cc_entry.get(),
@@ -257,6 +266,8 @@ def draft(window, smpt_addr, user_name):
     #nút này để xóa phần viết thư
     cancel_button = tk.Button(window, text = "Cancel", command=lambda: destroy_all_widgets(window))
     cancel_button.grid(row =12, column= 2, pady = 10)
+    
+    window.after(5000, lambda:{ keep_connection_alive(client_socket, window)})
 
 
 def on_enter(event, color:str):
@@ -309,3 +320,22 @@ def get_messages(pop3_addr: tuple, mails : dict, user):
      
     if has_new_messages:
         save_all_mails(mails, ".mails/" + user[0])
+
+def on_refresh_timer_timeout(window, refresh_time, mails: dict, empty_space, mailbox):
+    pop3_addr = (int(load_config(".mails")["General"]["mail_server_address"]), int(load_config(".mails")["General"]["pop3_port"]))  
+    user = load_config(".mails")["User"]["name"]
+    
+    get_messages(pop3_addr, mails, user)
+    load_all_mails(mails, ".mails/" + user)
+    inbox(mailbox, empty_space, mails, user)
+        
+    refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
+    print("Refreshed: ", refresh_time)
+    window.after(refresh_time, lambda: on_refresh_timer_timeout(window, refresh_time, mails, empty_space, mailbox))
+        
+
+def keep_connection_alive(client_socket, window, keep_alive_time):
+    noop_command = "NOOP\r\n"
+    client_socket.send(noop_command.encode())
+    client_socket.recv(1024)
+    window.after(keep_alive_time * 1000, keep_connection_alive)

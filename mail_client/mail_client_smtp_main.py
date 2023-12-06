@@ -15,6 +15,11 @@ time.sleep(2.0)
 smtpMailserver : tuple = ("127.0.0.1", 2225)
 pop3Mailserver : tuple = ("127.0.0.1", 3335)
 
+if not has_config(".mails"):
+    save_default_config(".mails")
+    #print("Write new config")
+cfg = load_config(".mails")    
 
-app(smtpMailserver, pop3Mailserver)
+
+app(cfg)
 
