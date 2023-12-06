@@ -14,6 +14,7 @@ from tkinter import filedialog
 from tkinter import ttk
 from tkinter.tix import ComboBox
 from turtle import color
+import webbrowser
 from mail_client_pop3_func import *
 from mail_client_smtp_func import *
 from typing import List
@@ -54,23 +55,23 @@ def app(smtp_addr: tuple, pop3_addr: tuple):
     # khung để làm việc với viết thư và đọc thư, mở ra khi các hàm được chọn, có thể tự đóng lại để tiết kiệm chỗ trống
     emptySpace = tk.Frame(window, padx = 20)
     
-    newMailButton = tk.Button(sideBar, text = "+ New Mail", command = lambda: { draft(emptySpace, smtp_addr), emptySpace.grid(row = 0, column= 2) }, bd =2, bg=BLUE, padx= 124, pady = 10, cursor="plus")
+    newMailButton = tk.Button(sideBar, text = "+ New Mail", command = lambda: { draft(emptySpace, smtp_addr, user[0]), emptySpace.grid(row = 0, column= 2) }, bd =2, bg=BLUE, padx= 124, pady = 8, cursor="plus")
     newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 3, sticky= "NWE")
     hoverBind(newMailButton, BLUE_DARKEN)
        
-    refreshButton = tk.Button(sideBar, text = "refresh", command = lambda: { get_messages(pop3_addr, mails, user), load_all_mails(mails, ".mails/" + user[0]), inbox(mailbox, emptySpace, mails)}, bd =2, bg=BLUE, padx= 104, pady = 10, cursor= "exchange")
-    refreshButton.grid(row= 1, column = 0, columnspan = 3, sticky= "NWE")
+    refreshButton = tk.Button(sideBar, text = "refresh", command = lambda: { get_messages(pop3_addr, mails, user), load_all_mails(mails, ".mails/" + user[0]), inbox(mailbox, emptySpace, mails, user[0])}, bd =2, bg=BLUE, padx= 20, pady = 8, cursor= "exchange")
+    refreshButton.grid(row= 1, column = 0, columnspan = 1, sticky= "NWE")
     hoverBind(refreshButton, BLUE_DARKEN)
     
     filter_label = tk.Label(sideBar, text = "Filter: ", bg = GOLD)
-    filter_label.grid(row = 2, column = 0, sticky = "NSWE")
+    filter_label.grid(row = 1, column = 1, sticky = "NSWE")
 
     filter_list = ["all", "important", "junk"]
     filterButton = ttk.Combobox(sideBar, values=filter_list)
     filterButton.set("all")
     filterButton.bind("<<ComboboxSelected>>", on_change_filter)
     
-    filterButton.grid(row = 2, column = 1, columnspan= 2, sticky= "NSWE")
+    filterButton.grid(row = 1, column = 2, columnspan= 1, sticky= "NSWE")
     
 
     #https://stackoverflow.com/questions/3085696/adding-a-scrollbar-to-a-group-of-widgets-in-tkinter
@@ -88,7 +89,7 @@ def app(smtp_addr: tuple, pop3_addr: tuple):
     
     get_messages(pop3_addr, mails, user)
     load_all_mails(mails, ".mails/" + user[0])
-    inbox(mailbox, emptySpace, mails)
+    inbox(mailbox, emptySpace, mails, user[0])
 
     sideBar.grid(row=0 ,column= 0, ipadx= 2)
     sideBar.update_idletasks()
@@ -116,7 +117,7 @@ def destroy_all_widgets(frame):
     frame.grid_forget()
 
         
-def inbox(window : tk.Frame, mts : tk.Frame, mails : dict):
+def inbox(window : tk.Frame, mts : tk.Frame, mails : dict, username:str):
     
     #mails = getMailList(pop3Socket)
      # Phương thức khởi tạo
@@ -136,19 +137,20 @@ def inbox(window : tk.Frame, mts : tk.Frame, mails : dict):
         Sender = tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["From"], bg =WHITE, font=("sans-serif", 8, "bold"))
         Sender.grid(row = 0, column = 0, sticky = "nw")
         if mails[msg_uidl].read == True:
-            Sender.config(foreground = TEXT_HIGHLIGHT)
+           Sender.config(foreground = TEXT_READ)
         else:
-            Sender.config(foreground = TEXT_READ)
+           Sender.config(foreground = TEXT_HIGHLIGHT)
             
         tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["Subject"], bg =WHITE).grid(row = 1, column = 0, sticky = "nw")
         item.grid(row = i, column = 0, sticky = "N", ipady= 2)
-        item.bind("<Button-1>", lambda event ,mts=mts, mail = mails[msg_uidl]: { readMail(event, mts, mail), showMTSpace(mts) })
+        item.bind("<Button-1>", lambda event ,mts=mts, mail = mails[msg_uidl]: { readMail(event, mts, mail, username), showMTSpace(mts) })
         hoverBind(item, WHITE_DARKEN)
         window.insert(tk.END, item)
         i = i+1
 
 
-def readMail(event ,window, mail: dict): 
+def readMail(event ,window, mail: dict, username: str): 
+    mail.read = False
     destroy_all_widgets(window)
     message_string = mail.message_as_string
     mail_component = get_message_from_string(message_string)
@@ -169,7 +171,7 @@ def readMail(event ,window, mail: dict):
             content_type : str = part.get_content_type()
             if content_type == "text/plain":
                 body.insert(tk.END, "\n\n" + part.get_payload(decode=True).decode())
-            elif content_type.startswith("multipart"):
+            elif content_type.startswith("application"):
                 attachent_count += 1
     else:
         body.insert(tk.END, "\n\n" + mail_component.get_payload(decode=True).decode())
@@ -184,14 +186,33 @@ def readMail(event ,window, mail: dict):
     cancel_button = tk.Button(window, text = "Cancel", command=lambda: destroy_all_widgets(window))
     cancel_button.grid(row = 7, column= 0, pady = 10)
     
-    tk.Label(window, text = "there are " + str(attachent_count) + " attachments").grid(row = 7, column = 1)
+    file_link = tk.Label(window, text = "there are " + str(attachent_count) + " attachments", cursor= "hand2", padx = 6)
+    file_link.grid(row = 7, column = 1)
+    file_link.bind("<Button-1>", lambda event: open_file(mail.uidl , username))
+    hoverBind(file_link, WHITE_DARKEN)
+    
 
-def draft(window, smpt_addr):
+
+def open_file(m_uidl, username):
+    initial_dir = os.path.join(".mails", username, "files", m_uidl)
+    
+    file_path = filedialog.askopenfilename(
+        initialdir=initial_dir,
+        title="Select File",
+        filetypes=[("All Files", "*.*")]
+    )
+
+    if file_path:
+        # Use os.startfile to open the file with the default program
+        os.startfile(file_path)
+
+def draft(window, smpt_addr, user_name):
     destroy_all_widgets(window)
     # Tạo các nhãn và ô chỉnh sửa
-    tk.Label(window, text="From:").grid(row=0, column=0, sticky="e")
-    from_entry = tk.Entry(window)
-    from_entry.grid(row=0, column=1, columnspan=2, sticky="we")
+    tk.Label(window, text="From: ").grid(row=0, column=0, sticky="e")
+    tk.Label(window, text = user_name, anchor= "w").grid(row = 0, column = 1, sticky= "we")
+    #from_entry = tk.Entry(window)
+    #from_entry.grid(row=0, column=1, columnspan=2, sticky="we")
 
     tk.Label(window, text="To:").grid(row=1, column=0, sticky="e")
     to_entry = tk.Entry(window)
@@ -222,7 +243,7 @@ def draft(window, smpt_addr):
     send_button = tk.Button(window, text="Send",
                             command=lambda: sendMail(
                                 smpt_addr,
-                                from_entry.get(),
+                                user_name,
                                 to_entry.get(),
                                 cc_entry.get(),
                                 bcc_entry.get(),
