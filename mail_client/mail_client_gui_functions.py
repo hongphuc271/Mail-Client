@@ -1,22 +1,8 @@
-﻿from ast import Lambda
-from cProfile import label
-import email
-from email.iterators import body_line_iterator
-from json import load
-from logging import warning
-import mailbox
+﻿import email
 from pickle import FALSE
-from queue import Empty
-from re import M
-from smtplib import SMTP
-from sqlite3 import Row
-from textwrap import wrap
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
-from tkinter.tix import ComboBox
-from turtle import color
-import webbrowser
 from mail_client_pop3_func import *
 from mail_client_smtp_func import *
 from typing import List
@@ -36,7 +22,9 @@ TEXT_READ = "#8c2ce6"
 
 
 def app(cfg):
-    smtp_addr = (cfg["General"]["mail_server_address"], int(cfg["General"]["smtp_port"]))
+    smtp_addr: tuple
+    pop3_addr: tuple
+    smtp_addr = (cfg["General"]["mail_server_address"], int(cfg["General"]["pop3_port"]))
     pop3_addr = (cfg["General"]["mail_server_address"], int(cfg["General"]["pop3_port"]))
 
     user = ["inbox@testmail.net", "testpass"]

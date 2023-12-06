@@ -1,10 +1,8 @@
 ﻿from socket import *
 from typing import List
 import email
-import time
 import os
 import configparser
-import poplib
 
 
 
@@ -197,11 +195,17 @@ def save_config(folder_path : str, cfg_parameters : dict):
     config = configparser.ConfigParser()
 
     # Thêm các giá trị vào file cấu hình
-    config['Settings'] = cfg_parameters
+    #for section in cfg_parameters.keys():
+     #   config[section] = cfg_parameters.get(section, {})
+    
+    for section, parameters in cfg_parameters.items():
+        config[section] = parameters
 
     # Lưu file cấu hình
     with open(folder_path + "/" + 'config.cfg', 'w') as configfile:
         config.write(configfile)
+
+
 
 def save_default_config(folder_path : str):
     save_config(".mails",
@@ -218,11 +222,7 @@ def save_default_config(folder_path : str):
                         "Important" : "urgent, ASAP",
                         "Work" : "report, meeting",
                         "Spam" : "virus, hack, crack",
-                    },
-                "User" : {
-                        "name" : "inbox@testmail.net",
-                        "password" : "12345"
-                    }    
+                    }  
                 })
 
 
@@ -233,7 +233,11 @@ def load_config(folder_path : str) -> dict:
     config.read(folder_path + "/" + "config.cfg")
 
     # Lấy giá trị từ file cấu hình
-    return dict(config["Settings"]).copy()
+    cfg_parameters = {}
+    for section in config.sections():
+        cfg_parameters[section] = config[section]
+
+    return cfg_parameters
 
 def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
     new_msg = MailMessage(msg_as_string, [], uidl, False)
