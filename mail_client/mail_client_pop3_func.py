@@ -212,7 +212,7 @@ def save_default_config(folder_path : str):
                     },
                 "Filter" : {
                         "spam" : "subject, content: virus, hack, crack",
-                        "project" : "subject, content: person1@test.net, person2@test.net",
+                        "project" : "from: person1@test.net, person2@test.net",
                         "important" : "subject, content: urgent, ASAP",
                         "work" : "subject, content: report, meeting",
                     }
@@ -260,6 +260,11 @@ def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
                 break
             continue
         if "content" in target_texts and any(key in content for key in keywords):
+            folders.append(filter)
+            if filter == "spam":
+                break
+            continue
+        if "from" in target_texts and sender in keywords:
             folders.append(filter)
             if filter == "spam":
                 break
