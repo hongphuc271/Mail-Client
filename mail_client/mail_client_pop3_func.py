@@ -224,17 +224,14 @@ def save_default_config(folder_path : str):
                         "keep_alive_time" : 12,
                     },
                 "Filter" : {
-                        "List" : "all project important work spam",
+                        "List" : "inbox project important work spam",
                         "Project" : "person1@test.net, person2@test.net",
                         "Important" : "urgent, ASAP",
                         "Work" : "report, meeting",
                         "Spam" : "virus, hack, crack",
                     },
                     
-                "User" : {
-                        "Name" : "inbox@testmail.net",
-                        "Pass" : "12345"
-                    }
+
                 })
 
 

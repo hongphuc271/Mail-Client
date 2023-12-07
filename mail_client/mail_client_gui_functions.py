@@ -64,8 +64,9 @@ def app(cfg):
 
     filter_list = cfg["Filter"]["List"]
     filterButton = ttk.Combobox(sideBar, values=filter_list)
-    filterButton.set("all")
+    #filterButton.set("inbox")
     filterButton.bind("<<ComboboxSelected>>", on_change_filter)
+    filterButton.bind("<KeyRelease>", on_change_filter)
     on_change_filter(selected_value=filterButton.get())   
 
     filterButton.grid(row = 1, column = 2, columnspan= 1, sticky= "NSWE")
@@ -127,6 +128,7 @@ def inbox(window : tk.Frame, mts : tk.Frame, mails : dict, username:str):
     #    self.uidl : str = uidl
     #    self.read : bool = read
     filter_tag = load_config(".mails")["CurrentFilter"]["Tag"]
+    print(load_config(".mails")["Filter"])
     current_scroll_position = window.yview()
     destroy_all_widgets(window)
     window.delete(0, tk.END)
@@ -135,7 +137,7 @@ def inbox(window : tk.Frame, mts : tk.Frame, mails : dict, username:str):
     for msg_uidl in mail_keys:
 
         for tag in mails[msg_uidl].tags:
-            if filter_tag == tag or filter_tag == "all":
+            if filter_tag in tag:
                 item = tk.Frame(window, width= 300, height= 50, padx= 2, bg= WHITE, cursor = "hand2", bd =2 )
                 item.grid_propagate(False);
                 item.update_idletasks()
