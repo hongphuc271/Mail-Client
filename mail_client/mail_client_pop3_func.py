@@ -10,8 +10,10 @@ from email.mime.text import MIMEText
 from email.utils import formatdate
 from os.path import basename
 
+# Class MailMessage lưu nội dung của mail và các thông tin liên qua như
+# id của mail; mail đọc hay chưa?; các tag của mail
 class MailMessage:
-    # Phương thức khởi tạo
+    # Khởi tạo một vài tham số
     def __init__(self, message_as_string : str, tags : List[str], uidl : str, read : bool):
         self.message_as_string : str = message_as_string
         self.tags : List[str] = tags
@@ -34,6 +36,12 @@ def sign_in(mail_server : tuple, user_info) -> socket:
 
 	return client_socket
 
+def end_pop3_session(client_socket : socket):
+    quit_command = "QUIT\r\n"
+    client_socket.send(quit_command.encode())
+    client_socket.recv(1024)
+    client_socket.close()
+
 def get_message_count(client_socket : socket) -> int:
     stat_command = "STAT\r\n"
     client_socket.send(stat_command.encode())
@@ -41,7 +49,6 @@ def get_message_count(client_socket : socket) -> int:
     print("Recv: ", stat)
     #Ex: +OK 12 1024
     message_count = int(stat.split(" ", 2)[1])
-    #print(message_count)
     return message_count
 
 def retrieve_message_as_string(client_socket : socket, message_index : int) -> str:
@@ -97,15 +104,15 @@ def get_full_parsed_message(msg_as_string : str) -> str:
 def parse_message(msg_as_string : str) -> (str, str, int):
     msg = email.message_from_string(msg_as_string)
 
-    # Lưu thông tin từ email
+    # Lấy thông tin cở bản từ mail
     out_msg = ["", "", 0]
     out_msg[0] += "Date: %s" % msg["Date"]
     out_msg[0] += "\nFrom: %s" % msg["From"]
     out_msg[0] += "\nTo: %s" % msg["To"]
     out_msg[0] += "\nCc: %s" % msg["Cc"]
-    #out_msg += "\nBcc: %s" % msg["Bcc"]
     out_msg[0] += "\nSubject: %s" % msg["Subject"]
 
+    # Lấy body text và đếm attachment từ mail
     # Refs: https://stackoverflow.com/questions/4094933/python-imap-how-to-parse-multipart-mail-content
     attachent_count = 0
     if msg.is_multipart():
@@ -202,13 +209,12 @@ def save_default_config(folder_path : str):
                         "smtp_port" : "2225",
                         "pop3_port" : "3335",
                         "refresh_time" : 10,
-                        "keep_alive_time" : 12,
                     },
                 "Filter" : {
-                        "Project" : "person1@test.net, person2@test.net",
-                        "Important" : "urgent, ASAP",
-                        "Work" : "report, meeting",
-                        "Spam" : "virus, hack, crack",
+                        "project" : "person1@test.net, person2@test.net",
+                        "important" : "urgent, ASAP",
+                        "work" : "report, meeting",
+                        "spam" : "virus, hack, crack",
                     }
                 })
 
@@ -234,23 +240,24 @@ def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
     if sender is None:
         sender = "Unknown"
     new_msg.tags.append("sender:" + sender)
-
+    
     #Thêm tag xác định thư mục
     folders = ["inbox"]
     subject = msg["Subject"]
     content = parse_message(msg_as_string)[1]
 
     cfg_filters : dict = load_config(".mails").get("Filter", {})
+    print(cfg_filters["important"])
 
     while(cfg_filters != {}):
-        if any(key in content for key in cfg_filters["spam"].split(", ")):
+        if subject != None and content != None and any(key in (subject + '\n' + content) for key in cfg_filters["spam"].split(", ")):
             folders.append("spam")
             break
-        if sender in cfg_filters["project"].split(", "):
+        if sender != None and sender in cfg_filters["project"].split(", "):
             folders.append("project")
-        if any(key in subject for key in cfg_filters["important"].split(", ")):
+        if subject != None and any(key in subject for key in cfg_filters["important"].split(", ")):
             folders.append("important")
-        if any(key in content for key in cfg_filters["work"].split(", ")):
+        if content != None and any(key in content for key in cfg_filters["work"].split(", ")):
             folders.append("work")
         break
 
@@ -260,15 +267,20 @@ def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
     return new_msg
 
 def initiate(address : tuple) -> socket:
-	client_socket = socket(AF_INET, SOCK_STREAM)
-	client_socket.connect(address)
-	client_socket.recv(1024)
-	return client_socket
+    client_socket = socket(AF_INET, SOCK_STREAM)
+    client_socket.connect(address)
+    client_socket.recv(1024)
+    
+    helo_command : str = 'HELO ' + client_socket.getsockname()[0] + '\r\n'
+    client_socket.send(helo_command.encode())
+    client_socket.recv(1024)
 
-def send_mail(client_socket : socket, from_user : str, to_user : str, cc_users : str, bcc_users : str, subject : str, message : str, attachment_paths : List[str] = []):
-    #print("To: ", to_user=="")
-    if to_user == "" and cc == [] and bcc == []:
+    return client_socket
+
+def send_mail(client_socket : socket, mailserver : tuple, from_user : str, to_user : str, cc_users : str, bcc_users : str, subject : str, message : str, attachment_paths : List[str] = []):
+    if to_user == "" and cc_users == "" and bcc_users == "":
         return
+    client_socket = initiate(mailserver)
     helo_command : str = 'HELO ' + client_socket.getsockname()[0] + '\r\n'
     client_socket.send(helo_command.encode())
     client_socket.recv(1024)
@@ -320,3 +332,11 @@ def send_mail(client_socket : socket, from_user : str, to_user : str, cc_users :
     end_message = '\r\n.\r\n'
     client_socket.send(end_message.encode())
     client_socket.recv(1024)
+
+    end_smtp_session(client_socket)
+
+def end_smtp_session(client_socket : socket):
+    quit_command = "QUIT\r\n"
+    client_socket.send(quit_command.encode())
+    client_socket.recv(1024)
+    client_socket.close()
