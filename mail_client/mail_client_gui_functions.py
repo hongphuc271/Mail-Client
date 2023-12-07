@@ -1,8 +1,10 @@
-﻿import email
+﻿from ast import Lambda
+import email
 from pickle import FALSE
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
+from webbrowser import get
 from mail_client_pop3_func import *
 from mail_client_smtp_func import *
 from typing import List
@@ -24,7 +26,7 @@ TEXT_READ = "#8c2ce6"
 def app(cfg):
     smtp_addr: tuple
     pop3_addr: tuple
-    smtp_addr = (cfg["General"]["mail_server_address"], int(cfg["General"]["pop3_port"]))
+    smtp_addr = (cfg["General"]["mail_server_address"], int(cfg["General"]["smtp_port"]))
     pop3_addr = (cfg["General"]["mail_server_address"], int(cfg["General"]["pop3_port"]))
 
     user = [cfg["User"]["Username"], cfg["User"]["Password"]]
@@ -64,7 +66,8 @@ def app(cfg):
     filterButton = ttk.Combobox(sideBar, values=filter_list)
     filterButton.set("all")
     filterButton.bind("<<ComboboxSelected>>", on_change_filter)
-    
+    on_change_filter(selected_value=filterButton.get())   
+
     filterButton.grid(row = 1, column = 2, columnspan= 1, sticky= "NSWE")
     
 
@@ -72,7 +75,6 @@ def app(cfg):
     mailbox_canvas = tk.Canvas(sideBar, height= 400, width= 300, borderwidth=0)
     mailbox = tk.Listbox(mailbox_canvas, bg= "#bfc2c9", height= 400, width= 300, selectmode=tk.SINGLE)  
     mailScroll = tk.Scrollbar(sideBar, orient="vertical", command= mailbox_canvas.yview)
-    
     mailbox_canvas.configure(yscrollcommand = mailScroll.set)
     
     mailbox_canvas.grid(row = 3, column= 0, columnspan=3 ,sticky= "NW") 
@@ -84,16 +86,18 @@ def app(cfg):
     get_messages(pop3_socket, mails, user[0])
     load_all_mails(mails, ".mails/" + user[0])
     inbox(mailbox, emptySpace, mails, user[0])
-
-    sideBar.grid(row=0 ,column= 0, ipadx= 2)
-    #sideBar.update_idletasks()
     
     refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
     window.after(refresh_time, lambda: on_refresh_timer_timeout(window, refresh_time, mails, emptySpace, mailbox, pop3_socket))
     window.mainloop()
 
-def on_change_filter(event):
-    pass
+def on_change_filter(event=None, selected_value=None):
+    if event:
+        selected_value = event.widget.get()
+
+    print("Filter tag changed to " + selected_value)
+    save_config(".mails", {"CurrentFilter": {"Tag": selected_value}})
+    
 
 # để canvas cuộn được
 def onFrameConfigure(canvas):
@@ -117,34 +121,42 @@ def destroy_all_widgets(frame):
         
 def inbox(window : tk.Frame, mts : tk.Frame, mails : dict, username:str):
     
-    #mails = getMailList(pop3Socket)
-     # Phương thức khởi tạo
     #def __init__(self, message_as_string : str, tags : List[str], uidl : str, read : bool):
     #    self.message_as_string : str = message_as_string
     #    self.tags : List[str] = tags
     #    self.uidl : str = uidl
     #    self.read : bool = read
-    
+    filter_tag = load_config(".mails")["CurrentFilter"]["Tag"]
+    current_scroll_position = window.yview()
     destroy_all_widgets(window)
+    window.delete(0, tk.END)
     i = 0
     mail_keys = list(mails.keys())
     for msg_uidl in mail_keys:
-        item = tk.Frame(window, width= 300, height= 50, padx= 2, bg= WHITE, cursor = "hand2", bd =2 )
-        item.grid_propagate(False);
-        item.update_idletasks()
-        Sender = tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["From"], bg =WHITE, font=("sans-serif", 8, "bold"))
-        Sender.grid(row = 0, column = 0, sticky = "nw")
-        if mails[msg_uidl].read == True:
-           Sender.config(foreground = TEXT_READ)
-        else:
-           Sender.config(foreground = TEXT_HIGHLIGHT)
+
+        for tag in mails[msg_uidl].tags:
+            if filter_tag == tag or filter_tag == "all":
+                item = tk.Frame(window, width= 300, height= 50, padx= 2, bg= WHITE, cursor = "hand2", bd =2 )
+                item.grid_propagate(False);
+                item.update_idletasks()
+                Sender = tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["From"], bg =WHITE, font=("sans-serif", 8, "bold"))
+                Sender.grid(row = 0, column = 0, sticky = "nw")
+                if mails[msg_uidl].read == True:
+                   Sender.config(foreground = TEXT_READ)
+                else:
+                   Sender.config(foreground = TEXT_HIGHLIGHT)
             
-        tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["Subject"], bg =WHITE).grid(row = 1, column = 0, sticky = "nw")
-        item.grid(row = i, column = 0, sticky = "N", ipady= 2)
-        item.bind("<Button-1>", lambda event ,mts=mts, mail = mails[msg_uidl]: { readMail(event, mts, mail, username), showMTSpace(mts), configRead(mail)})
-        hoverBind(item, WHITE_DARKEN)
-        window.insert(tk.END, item)
-        i = i+1
+                tk.Label(item, text = email.message_from_string(mails[msg_uidl].message_as_string)["Subject"], bg =WHITE).grid(row = 1, column = 0, sticky = "nw")
+                item.grid(row = i, column = 0, sticky = "N", ipady= 2)
+                item.bind("<Button-1>", lambda event ,mts=mts, mail = mails[msg_uidl]: { readMail(event, mts, mail, username), showMTSpace(mts), configRead(mail)})
+                hoverBind(item, WHITE_DARKEN)
+                window.insert(tk.END, item)
+                i = i+1     
+                break
+                
+       
+        
+    window.yview_moveto(current_scroll_position[0])
 
 
 def readMail(event ,window, mail: dict, username: str): 
@@ -193,7 +205,7 @@ def readMail(event ,window, mail: dict, username: str):
 def configRead(mail: dict):
     if mail.read == False:
         mail.read = True
-        save_changes_to_mail(mail, ".mails/" + load_config(".mails")["User"]["Name"])
+        save_changes_to_mail(mail, ".mails/" + load_config(".mails")["User"]["Username"])
 
 
 def open_file(m_uidl, username):
@@ -318,7 +330,7 @@ def get_messages(client_socket: socket, mails : dict, user_name : str):
 
 def on_refresh_timer_timeout(window, refresh_time, mails: dict, empty_space, mailbox, client_socket: socket):
       
-    user = load_config(".mails")["User"]["name"]
+    user = load_config(".mails")["User"]["Username"]
     
     get_messages(client_socket, mails, user)
     load_all_mails(mails, ".mails/" + user)
