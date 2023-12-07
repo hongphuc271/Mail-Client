@@ -19,7 +19,7 @@ class MainWindow:
     def on_refresh_timer_timeout(self):
         get_messages(self)
         
-        update_all_tabs()
+        self.update_all_tabs()
         
         refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
         refresh_timer = self.root.after(refresh_time, self.on_refresh_timer_timeout)

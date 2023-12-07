@@ -211,10 +211,10 @@ def save_default_config(folder_path : str):
                         "refresh_time" : 10,
                     },
                 "Filter" : {
-                        "project" : "person1@test.net, person2@test.net",
-                        "important" : "urgent, ASAP",
-                        "work" : "report, meeting",
-                        "spam" : "virus, hack, crack",
+                        "spam" : "subject, content: virus, hack, crack",
+                        "project" : "subject, content: person1@test.net, person2@test.net",
+                        "important" : "subject, content: urgent, ASAP",
+                        "work" : "subject, content: report, meeting",
                     }
                 })
 
@@ -247,19 +247,23 @@ def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
     content = parse_message(msg_as_string)[1]
 
     cfg_filters : dict = load_config(".mails").get("Filter", {})
-    print(cfg_filters["important"])
 
-    while(cfg_filters != {}):
-        if subject != None and content != None and any(key in (subject + '\n' + content) for key in cfg_filters["spam"].split(", ")):
-            folders.append("spam")
-            break
-        if sender != None and sender in cfg_filters["project"].split(", "):
-            folders.append("project")
-        if subject != None and any(key in subject for key in cfg_filters["important"].split(", ")):
-            folders.append("important")
-        if content != None and any(key in content for key in cfg_filters["work"].split(", ")):
-            folders.append("work")
-        break
+    for filter in cfg_filters:
+        #Ex: subject, content: urgent, ASAP
+        s = cfg_filters[filter].split(": ", 1)
+        target_texts = s[0].split(", ")
+        keywords = s[1].split(", ")
+
+        if "subject" in target_texts and any(key in subject for key in keywords):
+            folders.append(filter)
+            if filter == "spam":
+                break
+            continue
+        if "content" in target_texts and any(key in content for key in keywords):
+            folders.append(filter)
+            if filter == "spam":
+                break
+            continue
 
     if len(folders) > 0:
         new_msg.tags.append("folder:" + ','.join(folders))
