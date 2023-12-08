@@ -209,6 +209,8 @@ def save_default_config(folder_path : str):
                         "smtp_port" : "2225",
                         "pop3_port" : "3335",
                         "refresh_time" : 10,
+                        "username" : "",
+                        "password" : "",
                     },
                 "Filter" : {
                         "spam" : "subject, content: virus, hack, crack",
@@ -230,6 +232,18 @@ def load_config(folder_path : str) -> dict:
         cfg_parameters[section] = config[section]
 
     return cfg_parameters
+
+def set_config_param(folder_path : str, section : str, param_name : str, new_value : str):
+    config = configparser.ConfigParser()
+
+    # Đọc file cấu hình
+    config.read(folder_path + "/" + "config.cfg")
+
+    config.set(section, param_name, new_value)
+
+    # Lưu các thay đổi vào file cấu hình
+    with open(folder_path + "/" + 'config.cfg', 'w') as configfile:
+        config.write(configfile)
 
 def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
     new_msg = MailMessage(msg_as_string, [], uidl, False)

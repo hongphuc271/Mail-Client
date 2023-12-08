@@ -78,11 +78,11 @@ class UserWindow:
         self.mail_app = mail_app
         self.run()
 
-    #Hàm gọi khi nhấp vào nút Đăng nhập
-    def on_sign_in_clicked(self):
+    #Hàm đăng nhập và chạy giao diện chính
+    def sign_in_local(self):
         # Lưu thông tin đăng nhập
-        username = self.username_entry.get()
-        password = self.password_entry.get()
+        username = self.user_info[0]
+        password = self.user_info[1]
         self.mail_app.user_info = (username, password)
 
         # Ẩn giao diện đăng nhập
@@ -91,12 +91,26 @@ class UserWindow:
         #Chạy giao diện chính
         self.mail_app.run()
 
+    #Hàm gọi khi nhấp vào nút Đăng nhập
+    def on_sign_in_clicked(self):
+        self.user_info[0] = self.username_entry.get()
+        self.user_info[1] = self.password_entry.get()
+        self.sign_in_local()
+        # Lưu thông tin đang nhập cho những lần sau
+        if not has_config(".mails"):
+            save_default_config(".mails")
+
+        set_config_param(".mails", "General", "username", self.user_info[0])
+        set_config_param(".mails", "General", "password", self.user_info[1])
+
     #Hàm chính để chạy giao diện
     def run(self):
         # Tạo Frame cho cửa sổ đăng nhập
         self.login_frame = tk.Frame(self.root)
         self.login_frame.pack(padx=50, pady=50)
 
+        self.user_info = ["", ""]
+        
         # Tạo các widget cho Frame đăng nhập
         self.username_label = tk.Label(self.login_frame, text="Username:")
         self.username_label.pack(pady=10)
@@ -111,7 +125,16 @@ class UserWindow:
         self.password_entry.pack(pady=10)
 
         self.sign_in_button = tk.Button(self.login_frame, text="Sign In", command=self.on_sign_in_clicked)
-        self.sign_in_button.pack(pady=20)
+        self.sign_in_button.pack(pady=10)
+
+        if has_config(".mails"):
+            cfg = load_config(".mails")
+            self.user_info[0] = cfg["General"].get("username", "")
+            self.user_info[1] = cfg["General"].get("password", "")
+            if self.user_info[0] != "":
+                self.auto_sign_in_button = tk.Button(self.login_frame, text="Sign In as %s" % self.user_info[0], command=self.sign_in_local)
+                self.auto_sign_in_button.pack()
+
 
 #Hàm lấy mail từ server về máy
 def get_messages(mail_app : MainWindow):
@@ -149,6 +172,20 @@ def get_messages(mail_app : MainWindow):
 def load_messages(mail_app : MainWindow):
     load_all_mails(mail_app.mails, ".mails/" + mail_app.user_info[0])
 
+ #Hàm mở thư mục chứa attachments
+def open_files_location(mail_uidl : str, mails : dict, user_name : str):
+    if not(mail_uidl in mails):
+        print(mail_uidl + " no longer existed.")
+        return
+    initial_dir = os.path.join(".\.mails", user_name, "files", mail_uidl)
+    if not os.path.exists(initial_dir) or not os.listdir(initial_dir):
+        print(mail_uidl + " doesn't have any attachments")
+        return
+    print("Opening: ", initial_dir)
+    file_path = filedialog.askopenfilename(initialdir = initial_dir, title="", filetype = [("All Files", "*.*")])
+    if file_path:
+        os.startfile(file_path)
+
 #TabAll hiển thụ tất cả các mail
 class TabAll:
     #Khởi tạo một số tham số và tự động chạy bằng hàm self.run()
@@ -159,20 +196,16 @@ class TabAll:
         self.user_info = mail_app.user_info
         self.root = mail_app.root
         self.mail_app = mail_app
+        self.current_mail_id = ""
 
         self.run()
-
-    #Hàm dùng để cập nhật mail được hiển thị khi từ tab khác chuyển sang
-    def on_tab_switched_to(self, event):
-        current_tab = self.notebook.nametowidget(self.notebook.select())
-        if current_tab == self.tab_all:
-            self.update_message_display()
 
     #Hàm gọi khi một message được chọn, dùng để hiển thị nội dung của mail đó
     def on_message_selected(self, event):
         selected_item = event.widget.curselection()
         if selected_item != ():
             mail : MailMessage = self.mails[self.message_listbox.get(selected_item[0])]
+            self.current_mail_id = mail.uidl
 
             self.content_label.config(text=get_full_parsed_message(mail.message_as_string))
             if mail.read == False:
@@ -202,9 +235,6 @@ class TabAll:
         self.tab_all = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_all, text="All")
 
-        # Kết nối event khi một tab được nhấp vào với hàm self.on_tab_switched_to
-        self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_switched_to, add="+")
-
         # Tạo Frame chứa danh sách các mục bên trái
         self.left_frame = tk.Frame(self.tab_all)
         self.left_frame.grid(row=1, column=1, padx=10, pady=10, sticky="nw")
@@ -230,6 +260,10 @@ class TabAll:
         self.content_label = tk.Label(self.right_frame, text="Select an item on the left.", anchor="nw", justify="left")
         self.content_label.grid(row=0, column=0)
 
+        # Tạo bút Open files location
+        self.get_files_button = tk.Button(self.tab_all, text="Open files location", command=lambda: open_files_location(self.current_mail_id, self.mails, self.user_info[0]))
+        self.get_files_button.grid(row=2, column = 1, columnspan = 2) 
+
         # Thiết lập trọng số của cột và hàng để có thể mở rộng
         self.tab_all.columnconfigure(2, weight=1)
         self.tab_all.rowconfigure(1, weight=1)
@@ -245,15 +279,10 @@ class TabBySender:
         self.current_section = ""
         self.root = mail_app.root
         self.mail_app = mail_app
+        self.current_mail_id = ""
 
         self.run()
 
-    #Hàm dùng để cập nhật mail được hiển thị khi từ tab khác chuyển sang
-    def on_tab_switched_to(self, event):
-        current_tab = self.notebook.nametowidget(self.notebook.select())
-        if current_tab == self.tab_bysender:
-            self.update_message_display()
-    
     #Hàm gọi khi sender được chọn, dùng để lọc các mail do sender đó gửi
     def on_sender_selected(self, event):
         selected_item = self.sender_listbox.curselection()
@@ -285,6 +314,7 @@ class TabBySender:
         if selected_item != ():
             mail : MailMessage = self.mails[self.message_listbox.get(selected_item[0])]
             self.content_label.config(text=get_full_parsed_message(mail.message_as_string))
+            self.current_mail_id = mail.uidl
             
             if mail.read == False:
                 mail.read = True
@@ -320,9 +350,6 @@ class TabBySender:
 
     #Hàm chính để chạy giao diện
     def run(self):
-        # Kết nối event khi một tab được nhấp vào với hàm self.on_tab_switched_to
-        self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_switched_to, add="+")
-
         # Tạo tab "BySender"
         self.tab_bysender = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_bysender, text="Senders")
@@ -362,6 +389,10 @@ class TabBySender:
         # Cập nhật các hiển thị ngay khi vừa khởi tạo tab này
         self.update_message_display()
 
+        # Tạo bút Open files location
+        self.get_files_button = tk.Button(self.tab_bysender, text="Open files location", command=lambda: open_files_location(self.current_mail_id, self.mails, self.user_info[0]))
+        self.get_files_button.grid(row=2, column = 1, columnspan = 2)
+
         # Thiết lập trọng số của cột và hàng để có thể mở rộng
         self.tab_bysender.columnconfigure(2, weight=1)
         self.tab_bysender.rowconfigure(1, weight=1)
@@ -377,14 +408,9 @@ class TabByFolder:
         self.current_section = ""
         self.root = mail_app.root
         self.mail_app = mail_app
+        self.current_mail_id = ""
 
         self.run()
-
-    #Hàm dùng để cập nhật mail được hiển thị khi từ tab khác chuyển sang
-    def on_tab_switched_to(self, event):
-        current_tab = self.notebook.nametowidget(self.notebook.select())
-        if current_tab == self.tab_byfolder:
-            self.update_message_display()
     
     #Hàm gọi khi folder được chọn, dùng để lọc các mail thuộc vào folder
     def on_folder_selected(self, event):
@@ -416,7 +442,8 @@ class TabByFolder:
         if selected_item != ():
             mail : MailMessage = self.mails[self.message_listbox.get(selected_item[0])]
             self.content_label.config(text=get_full_parsed_message(mail.message_as_string))
-            
+            self.current_mail_id = mail.uidl
+
             if mail.read == False:
                 mail.read = True
                 self.message_listbox.itemconfig(selected_item, {"bg" : "white"})
@@ -452,9 +479,6 @@ class TabByFolder:
 
     #Hàm chính để chạy giao diện
     def run(self):
-        # Kết nối event khi một tab được nhấp vào với hàm self.on_tab_switched_to
-        self.notebook.bind("<<NotebookTabChanged>>", self.on_tab_switched_to, add="+")
-
         # Tạo tab "BySender"
         self.tab_byfolder = ttk.Frame(self.notebook)
         self.notebook.add(self.tab_byfolder, text="Folders")
@@ -490,7 +514,12 @@ class TabByFolder:
         self.content_label = tk.Label(self.right_frame, text="Select an item on the left.", anchor="nw", justify="left")
         self.content_label.grid(row=0, column=0)
 
+        # Update hiển thị của các mail ngay khi khởi tạo
         self.update_message_display()
+
+        # Tạo bút Open files location
+        self.get_files_button = tk.Button(self.tab_byfolder, text="Open files location", command=lambda: open_files_location(self.current_mail_id, self.mails, self.user_info[0]))
+        self.get_files_button.grid(row=2, column = 1, columnspan = 2)
 
         # Thiết lập trọng số của cột và hàng để có thể mở rộng
         self.tab_byfolder.columnconfigure(2, weight=1)
@@ -511,10 +540,10 @@ class TabNewMessage:
 
     # Hàm gọi khi nhấp vào nút Browse, giúp mở file manager và chọn file, trả về đường dẫn đến file đó trong file_paths
     def browse_file(self, file_paths : List[str]):
-        path = filedialog.askopenfilename(initialdir="/", title="Select File", filetypes=(("Text files", "*.txt"), ("All files", "*.*"))) 
-        if file_paths.count(path) > 0:
+        path = filedialog.askopenfilename(initialdir="/", title="Select File", filetype= [("All Files", "*.*")]) 
+        if not path or file_paths.count(path) > 0:
             return
-       
+        
         # Giới hạn kích thước tối đa (3 MB)
         file_size = os.stat(path).st_size
         total_size = 0

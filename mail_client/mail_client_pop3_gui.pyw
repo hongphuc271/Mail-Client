@@ -6,7 +6,7 @@ import time
 # Tạo cửa sổ chính
 root = tk.Tk()
 root.title("Mail Client")
-root.geometry("600x480")
+root.geometry("720x480")
 #Tạo giao diện chính
 mail_app = MainWindow(root)
 #Tạo giao diện dăng nhập, hiển thị trước khi vào giao diện chính
