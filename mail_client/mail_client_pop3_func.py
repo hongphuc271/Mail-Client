@@ -173,7 +173,7 @@ def load_all_mails(mails : dict, folder_path : str):
             m_msg = fil.read()
             mails[m_uidl] = MailMessage(m_msg, m_tags, m_uidl, m_read)
             print("Loaded " + path)
-
+            
 def write_attachments_to_files(msg_as_string : str, folder_path : str):
     msg = email.message_from_string(msg_as_string)
     if not os.path.exists(folder_path):
