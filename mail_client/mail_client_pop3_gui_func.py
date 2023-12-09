@@ -7,6 +7,7 @@ from socket import *
 import os
 from tkinter import Scrollbar
 import subprocess
+import webbrowser
 
 #Cửa sổ chính chứa tất cả các tab cần thiết
 class MainWindow:
@@ -69,6 +70,7 @@ class MainWindow:
         self.tab_all = TabAll(self)
         self.tab_bysender = TabBySender(self)
         self.tab_byfolder = TabByFolder(self)
+        self.tab_about = TabAbout(self)
 
 #Cửa sổ đăng nhập, hiện lên trước khi vào giao diện chính
 class UserWindow:
@@ -612,3 +614,31 @@ class TabNewMessage:
                                     )
                                 )
         send_button.grid(row=12, column=1, columnspan=2, pady=10)
+        
+class TabAbout:
+    def open_link():
+        webbrowser.open_new("https://github.com/hongphuc271/Mail-Client")
+
+    def __init__(self, mail_app : MainWindow):
+        self.client_socket = mail_app.client_socket
+        self.notebook = mail_app.notebook
+        self.mails = mail_app.mails
+        self.user_info = mail_app.user_info
+        self.root = mail_app.root
+        self.mail_app = mail_app
+        self.current_mail_id = ""
+
+        self.run()
+    def run(self): 
+        # Tạo tab About
+        self.tab_about = ttk.Frame(self.notebook)
+        self.notebook.add(self.tab_about, text="About")
+        
+        # Thêm nội dung vào tab
+        label = tk.Label(self.tab_about, text="Source code của dự án")
+        label.pack(padx=0, pady=5)
+
+        # Thêm hyperlink
+        link_label = tk.Label(self.tab_about, text="Github", fg="blue", cursor="hand2")
+        link_label.pack(pady=0)
+        link_label.bind("<Button-1>", lambda e: TabAbout.open_link())
