@@ -1,4 +1,4 @@
-﻿from json import load
+﻿
 from socket import *
 from typing import List
 import email
@@ -16,7 +16,13 @@ def deleteMail(clientSocket: socket, mailId: int):
     recv = clientSocket.recv(1024).decode()
     
     
-    
+def end_pop3_session(client_socket : socket):
+    quit_command = "QUIT\r\n"
+    client_socket.send(quit_command.encode())
+    client_socket.recv(1024)
+    client_socket.close()    
+
+
 class MailMessage:
     # Phương thức khởi tạo
     def __init__(self, message_as_string : str, tags : List[str], uidl : str, read : bool):
@@ -257,11 +263,13 @@ def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
     if sender is None:
         sender = "Unknown"
     new_msg.tags.append("sender:" + sender)
-
+    
     #Thêm tag xác định thư mục
     folders = ["inbox"]
     subject = msg["Subject"]
     content = parse_message(msg_as_string)[1]
+    
+    new_msg.tags.append("subject:" + subject)
 
     cfg_filters : dict = load_config(".mails").get("Filter", {})
 

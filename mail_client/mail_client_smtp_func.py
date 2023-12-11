@@ -1,5 +1,4 @@
-#from os import *
-import os.path
+
 from socket import *
 import time
 from typing import List
@@ -71,3 +70,11 @@ def send_mail(smtp_addr: tuple, from_user : str, to_user : str, cc_users : str, 
     end_message = '\r\n.\r\n'
     client_socket.send(end_message.encode())
     client_socket.recv(1024)
+    end_smtp_session(client_socket)
+    
+
+def end_smtp_session(client_socket : socket):
+    quit_command = "QUIT\r\n"
+    client_socket.send(quit_command.encode())
+    client_socket.recv(1024)
+    client_socket.close()
