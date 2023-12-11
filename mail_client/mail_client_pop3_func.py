@@ -60,7 +60,7 @@ def retrieve_message_as_string(client_socket : socket, message_index : int) -> s
     checksum = int(checksum_str)
     #Ex: +OK 1024\r\n
     #    ...(message)...
-    size_count = len(raw_msg) - 3 - len(checksum_str) - 1
+    size_count = len(raw_msg) - 4 - len(checksum_str) - 1
     while size_count < checksum:
         add_data = client_socket.recv(checksum - size_count).decode()
         raw_msg += add_data

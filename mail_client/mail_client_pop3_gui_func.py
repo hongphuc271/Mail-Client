@@ -251,7 +251,7 @@ class TabAll:
 
         # Tạo nút Get messages
         self.get_msg_button = tk.Button(self.tab_all, text="Get messages", command=self.get_messages_local)
-        self.get_msg_button.grid(row=0, column = 1, columnspan = 2) #Chỉnh nút Get Messages về vị trí center(near center)
+        self.get_msg_button.grid(row=0, column = 2)
 
         # Tạo Frame chứa nội dung bên phải
         self.right_frame = tk.Frame(self.tab_all)
@@ -264,7 +264,7 @@ class TabAll:
 
         # Tạo bút Open files location
         self.get_files_button = tk.Button(self.tab_all, text="Open files location", command=lambda: open_files_location(self.current_mail_id, self.mails, self.user_info[0]))
-        self.get_files_button.grid(row=2, column = 1, columnspan = 2) 
+        self.get_files_button.grid(row=2, column = 2) 
 
         # Thiết lập trọng số của cột và hàng để có thể mở rộng
         self.tab_all.columnconfigure(2, weight=1)
@@ -376,7 +376,7 @@ class TabBySender:
 
         # Tạo nút Get messages
         self.get_msg_button = tk.Button(self.tab_bysender, text="Get messages", command=self.get_messages_local)
-        self.get_msg_button.grid(row=0, column = 1, columnspan = 2) #Chỉnh nút Get Messages về vị trí center(near center)
+        self.get_msg_button.grid(row=0, column = 2)
 
 
         # Tạo Frame chứa nội dung bên phải
@@ -393,7 +393,7 @@ class TabBySender:
 
         # Tạo bút Open files location
         self.get_files_button = tk.Button(self.tab_bysender, text="Open files location", command=lambda: open_files_location(self.current_mail_id, self.mails, self.user_info[0]))
-        self.get_files_button.grid(row=2, column = 1, columnspan = 2)
+        self.get_files_button.grid(row=2, column = 2)
 
         # Thiết lập trọng số của cột và hàng để có thể mở rộng
         self.tab_bysender.columnconfigure(2, weight=1)
@@ -521,7 +521,7 @@ class TabByFolder:
 
         # Tạo bút Open files location
         self.get_files_button = tk.Button(self.tab_byfolder, text="Open files location", command=lambda: open_files_location(self.current_mail_id, self.mails, self.user_info[0]))
-        self.get_files_button.grid(row=2, column = 1, columnspan = 2)
+        self.get_files_button.grid(row=2, column = 2)
 
         # Thiết lập trọng số của cột và hàng để có thể mở rộng
         self.tab_byfolder.columnconfigure(2, weight=1)
@@ -616,8 +616,8 @@ class TabNewMessage:
         send_button.grid(row=12, column=1, columnspan=2, pady=10)
         
 class TabAbout:
-    def open_link():
-        webbrowser.open_new("https://github.com/hongphuc271/Mail-Client")
+    def open_link(self):
+        webbrowser.open_new(self.github_page)
 
     def __init__(self, mail_app : MainWindow):
         self.client_socket = mail_app.client_socket
@@ -626,7 +626,7 @@ class TabAbout:
         self.user_info = mail_app.user_info
         self.root = mail_app.root
         self.mail_app = mail_app
-        self.current_mail_id = ""
+        self.github_page = "https://github.com/hongphuc271/Mail-Client"
 
         self.run()
     def run(self): 
@@ -635,10 +635,10 @@ class TabAbout:
         self.notebook.add(self.tab_about, text="About")
         
         # Thêm nội dung vào tab
-        label = tk.Label(self.tab_about, text="Source code của dự án")
+        label = tk.Label(self.tab_about, text="Source code:")
         label.pack(padx=0, pady=5)
 
         # Thêm hyperlink
-        link_label = tk.Label(self.tab_about, text="Github", fg="blue", cursor="hand2")
+        link_label = tk.Label(self.tab_about, text="Github Page", fg="blue", cursor="hand2")
         link_label.pack(pady=0)
-        link_label.bind("<Button-1>", lambda e: TabAbout.open_link())
+        link_label.bind("<Button-1>", lambda e: self.open_link())
