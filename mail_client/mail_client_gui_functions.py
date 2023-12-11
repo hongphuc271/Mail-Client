@@ -366,11 +366,11 @@ def login_window(config):
     tk.Label(text = "Password").grid(row = 1, column= 0)
     username = tk.Entry(window)
     password = tk.Entry(window)
-    submit = tk.Button(text = "sign in", command= lambda: { get_user(username.get(), password.get()), window.destroy() })
-    submit.grid(row = 2, column= 0, columnspan= 2, sticky = "NW")
-    
     username.grid(row=0, column= 1)
     password.grid(row=1, column= 1)
+    submit = tk.Button(text = "sign in", command= lambda user = username.get(), passw = password.get(): { get_user( user, passw), window.destroy() })
+    submit.grid(row = 2, column= 0, columnspan= 2, sticky = "NW")
+    
     
     if "User" in load_config(".mails"):
         username = config["User"].get("Username", "Unknown")
