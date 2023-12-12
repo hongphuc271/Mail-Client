@@ -274,12 +274,12 @@ def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
         target_texts = s[0].split(", ")
         keywords = s[1].split(", ")
 
-        if "subject" in target_texts and any(key in subject for key in keywords):
+        if (not subject is None) and "subject" in target_texts and any(key in subject for key in keywords):
             folders.append(filter)
             if filter == "spam":
                 break
             continue
-        if "content" in target_texts and any(key in content for key in keywords):
+        if (not content is None) and "content" in target_texts and any(key in content for key in keywords):
             folders.append(filter)
             if filter == "spam":
                 break
