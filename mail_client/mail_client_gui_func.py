@@ -42,9 +42,10 @@ class MainWindow:
         cfg = load_config(".mails")
 
 		#Chạy mail server
-        run_command = "java -jar test-mail-server-1.0.jar -s %s -p %s -m .test-mail-server/" % (cfg["General"]["smtp_port"], cfg["General"]["pop3_port"])
-        process = subprocess.Popen(run_command, shell=True)
-        time.sleep(2.0)
+        if os.path.exists("test-mail-server-1.0.jar"):
+            run_command = "java -jar test-mail-server-1.0.jar -s %s -p %s -m .test-mail-server/" % (cfg["General"]["smtp_port"], cfg["General"]["pop3_port"])
+            process = subprocess.Popen(run_command, shell=True)
+            time.sleep(2.0)
         
         # Biến mails lưu tất cả các mail được load lên từ đĩa
         # Cấu trúc: ( key : str = uidl, value : MailMessage )

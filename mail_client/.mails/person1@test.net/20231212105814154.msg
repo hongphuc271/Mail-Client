@@ -1,5 +1,5 @@
 20231212105814154.msg
-0
+1
 sender:person2@test.net;folder:inbox,project
 Content-Type: multipart/mixed; boundary="===============6697678719649808483=="
 MIME-Version: 1.0

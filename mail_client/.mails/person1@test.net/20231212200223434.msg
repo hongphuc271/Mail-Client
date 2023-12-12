@@ -1,5 +1,5 @@
 20231212200223434.msg
-1
+0
 sender:Person 2 <person2@test.net>;folder:inbox
 Content-Type: multipart/mixed; boundary="------------qREUq6rM1KS0vaytrPr0BGmV"
 Message-ID: <34c1ed63-4f5d-4091-a6fe-ab14b61e5914@test.net>
