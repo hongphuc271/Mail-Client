@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>c4fd515f-93c2-4a9f-bb2a-46a1985df46f</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>mail_client_pop3_gui.pyw</StartupFile>
+    <StartupFile>mail_client_gui.pyw</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -21,27 +21,11 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="mail_client_pop3_gui_func.py">
+    <Compile Include="mail_client_gui_func.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="mail_client_pop3_gui.pyw" />
-    <Compile Include="mail_client_smpt_gui.pyw">
-      <Publish>False</Publish>
-    </Compile>
-    <Compile Include="mail_client_pop3.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="mail_client_pop3_func.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="mail_client_smtp.py" />
-    <Compile Include="mail_client_smtp_func.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="mail_client_smtp_main.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="sandbox.py">
+    <Compile Include="mail_client_gui.pyw" />
+    <Compile Include="mail_client_func.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
