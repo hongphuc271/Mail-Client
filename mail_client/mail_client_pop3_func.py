@@ -289,7 +289,7 @@ def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
 
     return new_msg
 
-def initiate(address : tuple) -> socket:
+def initiate_smtp(address : tuple) -> socket:
     client_socket = socket(AF_INET, SOCK_STREAM)
     client_socket.connect(address)
     client_socket.recv(1024)
@@ -303,28 +303,27 @@ def initiate(address : tuple) -> socket:
 def send_mail(client_socket : socket, mailserver : tuple, from_user : str, to_user : str, cc_users : str, bcc_users : str, subject : str, message : str, attachment_paths : List[str] = []):
     if to_user == "" and cc_users == "" and bcc_users == "":
         return
-    client_socket = initiate(mailserver)
-    helo_command : str = 'HELO ' + client_socket.getsockname()[0] + '\r\n'
-    client_socket.send(helo_command.encode())
-    client_socket.recv(1024)
+    client_socket = initiate_smtp(mailserver)
 
     mailfrom_command : str = 'MAIL FROM: %s\r\n' % from_user
     client_socket.send(mailfrom_command.encode())
     client_socket.recv(1024)
 
-    rcptto_command : str = 'RCPT TO: %s\r\n' % to_user
-    client_socket.send(rcptto_command.encode())
-    client_socket.recv(1024)
-
-    for ucc in cc_users.split(','):
-        cc_rcptto_command : str = 'RCPT TO: %s\r\n' % ucc
-        client_socket.send(cc_rcptto_command.encode())
+    if to_user != "":
+        rcptto_command : str = 'RCPT TO: %s\r\n' % to_user
+        client_socket.send(rcptto_command.encode())
         client_socket.recv(1024)
 
-    for ubcc in bcc_users.split(','):
-        bcc_rcptto_command : str = 'RCPT TO: %s\r\n' % ubcc
-        client_socket.send(bcc_rcptto_command.encode())
-        client_socket.recv(1024)
+    if cc_users != "":
+        for ucc in cc_users.split(','):
+            cc_rcptto_command : str = 'RCPT TO: %s\r\n' % ucc
+            client_socket.send(cc_rcptto_command.encode())
+            client_socket.recv(1024)
+    if bcc_users != "":
+        for ubcc in bcc_users.split(','):
+            bcc_rcptto_command : str = 'RCPT TO: %s\r\n' % ubcc
+            client_socket.send(bcc_rcptto_command.encode())
+            client_socket.recv(1024)
 
     data_command = 'DATA\r\n'
     client_socket.send(data_command.encode())
@@ -337,7 +336,7 @@ def send_mail(client_socket : socket, mailserver : tuple, from_user : str, to_us
     msg['Date'] = formatdate(localtime=True)
     msg['Subject'] = subject
     msg['Cc'] = cc_users
-    msg['Bcc'] = bcc_users
+    #msg['Bcc'] = bcc_users
     msg['Message-ID'] = str(time.time()) + "@" + from_user.split("@", 1)[1]
 
     msg.attach(MIMEText(message))
