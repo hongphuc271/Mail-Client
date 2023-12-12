@@ -1,5 +1,5 @@
 # Mail-Client
-Đồ án nhóm Socket Mail Client - Mạng máy tính, Trường Đại học Khoa học Tự Nhiên, 2023
+Đồ án nhóm Socket Mail Client - Mạng máy tính, Trường Đại học Khoa học Tự Nhiên, 2023.
 Lớp 22CTT5
 ## Lưu ý
 Để chạy được chương trình, bạn cần có:
