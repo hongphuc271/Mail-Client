@@ -217,10 +217,26 @@ def save_config(folder_path : str, cfg_parameters : dict):
     with open(folder_path + "/" + 'config.cfg', 'w') as configfile:
         config.write(configfile)
 
+def save_default_config(folder_path: str):
+    save_config("./.mails", {
+        "General": {
+            "mail_server_address": "127.0.0.1",
+            "smtp_port": "2225",
+            "pop3_port": "3335",
+            "refresh_time": 10,
+            "keep_alive_time": 12,
+        },
+        "Filter": {
+            "Project": "person1@test.net, person2@test.net",
+            "Important": "urgent, ASAP",
+            "Work": "report, meeting",
+            "Spam": "virus, hack, crack",
+        }
+    })
 
 
 def save_default_config(folder_path : str):
-    save_config(".mails",
+    save_config("./.mails",
                 {"General" :
                     {
                         "mail_server_address" : "127.0.0.1",
@@ -254,6 +270,7 @@ def load_config(folder_path : str) -> dict:
 
     return cfg_parameters
 
+
 def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
     new_msg = MailMessage(msg_as_string, [], uidl, False)
     
@@ -271,7 +288,7 @@ def create_new_message(uidl : str, msg_as_string : str) -> MailMessage:
     
     new_msg.tags.append("subject:" + subject)
 
-    cfg_filters : dict = load_config(".mails").get("Filter", {})
+    cfg_filters : dict = load_config("./.mails").get("Filter", {})
 
     while(cfg_filters != {}):
         if any(key in content for key in cfg_filters["spam"].split(", ")):

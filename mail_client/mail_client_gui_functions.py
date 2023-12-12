@@ -5,7 +5,7 @@ from tkinter import filedialog
 from tkinter import ttk
 from mail_client_pop3_func import *
 from mail_client_smtp_func import *
-from typing import List
+from typing import List, Text
 
 #color palates
 GOLD = "#fcba03"
@@ -53,7 +53,7 @@ def app(cfg):
     newMailButton.grid(row = 0, rowspan = 1, column = 0, columnspan = 3, sticky= "NWE")
     hoverBind(newMailButton, BLUE_DARKEN)
        
-    refreshButton = tk.Button(sideBar, text = "refresh", command = lambda: { get_messages(pop3_addr, mails, user[0]), load_all_mails(mails, ".mails/" + user[0]), inbox(mailbox_canvas ,mailbox, emptySpace, mails, user[0])}, bd =2, bg=BLUE, padx= 20, pady = 8, cursor= "exchange")
+    refreshButton = tk.Button(sideBar, text = "refresh", command = lambda: { get_messages(pop3_addr, mails, user[0]), load_all_mails(mails, "./.mails/" + user[0]), inbox(mailbox_canvas ,mailbox, emptySpace, mails, user[0])}, bd =2, bg=BLUE, padx= 20, pady = 8, cursor= "exchange")
     refreshButton.grid(row= 1, column = 0, columnspan = 1, sticky= "NWE")
     hoverBind(refreshButton, BLUE_DARKEN)
     
@@ -83,11 +83,11 @@ def app(cfg):
     mailbox.bind("<Configure>", lambda event, canvas = mailbox_canvas: onFrameConfigure(canvas))
     
 
-    load_all_mails(mails, ".mails/" + user[0])
+    load_all_mails(mails, "./.mails/" + user[0])
     get_messages(pop3_addr, mails, user[0])
     inbox(mailbox_canvas ,mailbox, emptySpace, mails, user[0])
     
-    refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
+    refresh_time = int(load_config("./.mails")["General"]["refresh_time"]) * 1000
     window.after(refresh_time, lambda: on_refresh_timer_timeout(window, refresh_time, mails, emptySpace, mailbox, pop3_addr))
     window.mainloop()
 
@@ -96,7 +96,7 @@ def on_change_filter(event=None, selected_value=None):
         selected_value = event.widget.get()
 
     print("Filter tag changed to " + selected_value)
-    save_config(".mails", {"CurrentFilter": {"Tag": selected_value}})
+    save_config("./.mails", {"CurrentFilter": {"Tag": selected_value}})
     
 
 # để canvas cuộn được
@@ -120,7 +120,7 @@ def destroy_all_widgets(frame):
 
         
 def inbox(canvas: tk.Canvas, window: tk.Frame, mts: tk.Frame, mails: dict, username: str):
-    filter_tag = load_config(".mails")["CurrentFilter"]["Tag"]
+    filter_tag = load_config("./.mails")["CurrentFilter"]["Tag"]
     #current_scroll_position = canvas.yview()
 
     destroy_all_widgets(window)
@@ -219,11 +219,11 @@ def readMail(event ,window, mail: dict, username: str):
 def configRead(mail: dict):
     if mail.read == False:
         mail.read = True
-        save_changes_to_mail(mail, ".mails/" + load_config(".mails")["User"]["Username"])
+        save_changes_to_mail(mail, "./.mails/" + load_config("./.mails")["User"]["Username"])
 
 
 def open_file(m_uidl, username):
-    initial_dir = os.path.join(".mails", username, "files", m_uidl)
+    initial_dir = os.path.join("./.mails", username, "files", m_uidl)
     
     file_path = filedialog.askopenfilename(
         initialdir=initial_dir,
@@ -272,25 +272,25 @@ def draft(window, smtp_addr, user_name):
 
     # Tạo nút "Send"
     send_button = tk.Button(window, text="Send",
-                            command=lambda: send_mail(
-                                smtp_addr,
-                                user_name,
-                                to_entry.get(),
-                                cc_entry.get(),
-                                bcc_entry.get(),
-                                subject_entry.get(),
-                                message_entry.get("1.0", "end-1c"),
-                                file_paths
-                                )
-                            )
+                            command=lambda: (send_mail(smtp_addr, user_name, to_entry.get(), cc_entry.get(),
+                                                       bcc_entry.get(), subject_entry.get(),
+                                                       message_entry.get("1.0", "end-1c"), file_paths),
+                                             clear_all_entry(to_entry, cc_entry, bcc_entry, subject_entry,
+                                                             message_entry)))
+
     send_button.grid(row=12, column=1, columnspan=2, pady=10)
     
-    #nút này để xóa phần viết thư
+    # Tạo nút xóa phần viết thư
     cancel_button = tk.Button(window, text = "Cancel", command=lambda: destroy_all_widgets(window))
     cancel_button.grid(row =12, column= 2, pady = 10)
     
 
-
+def clear_all_entry(to_entry, cc_entry, bcc_entry, subject_entry, message_entry):
+    to_entry.delete("0", "end")
+    cc_entry.delete("0", "end")
+    bcc_entry.delete("0", "end")
+    subject_entry.delete("0", "end")
+    message_entry.delete("1.0", "end")
 
 def on_enter(event, color:str):
     for widget in event.widget.winfo_children():
@@ -324,7 +324,7 @@ def browse_file( file_paths : List[str], window):
 
 def get_messages(pop3_addr: tuple, mails : dict, user_name : str):
 
-    client_socket = sign_in(pop3_addr, (load_config(".mails")["User"]["Username"], load_config(".mails")["User"]["Password"]) )
+    client_socket = sign_in(pop3_addr, (load_config("./.mails")["User"]["Username"], load_config("./.mails")["User"]["Password"]) )
     msg_count = get_message_count(client_socket)
     uidl_list = get_uidl_list(client_socket)
 
@@ -341,38 +341,44 @@ def get_messages(pop3_addr: tuple, mails : dict, user_name : str):
         #mails[msg_uidl] = MailMessage(msg_as_string, ["sender:" + sender], msg_uidl, False)
 
     if has_new_messages:
-        save_all_mails(mails, ".mails/" + user_name)
+        save_all_mails(mails, "./.mails/" + user_name)
         
     end_pop3_session(client_socket)
 
 def on_refresh_timer_timeout(window, refresh_time, mails: dict, empty_space, mailbox, pop3_addr: tuple):
     
-    user = load_config(".mails")["User"]["Username"]
+    user = load_config("./.mails")["User"]["Username"]
     
     get_messages(pop3_addr, mails, user)
-    load_all_mails(mails, ".mails/" + user)
+    load_all_mails(mails, "./.mails/" + user)
     inbox(mailbox.winfo_parent() ,mailbox, empty_space, mails, user)
         
-    refresh_time = int(load_config(".mails")["General"]["refresh_time"]) * 1000
+    refresh_time = int(load_config("./.mails")["General"]["refresh_time"]) * 1000
     print("Refreshed: ", refresh_time)
     window.after(refresh_time, lambda: on_refresh_timer_timeout(window, refresh_time, mails, empty_space, mailbox, pop3_addr))
           
 
 def login_window(config):
-     
+    
+    def submit_action():
+        user = username_entry.get()
+        passw = password_entry.get()
+        get_user(user, passw)
+        window.destroy()
+
     window = tk.Tk()
     window.geometry("400x100")
     tk.Label(text = "Username").grid(row = 0, column= 0)
     tk.Label(text = "Password").grid(row = 1, column= 0)
-    username = tk.Entry(window)
-    password = tk.Entry(window)
-    username.grid(row=0, column= 1)
-    password.grid(row=1, column= 1)
-    submit = tk.Button(text = "sign in", command= lambda user = username.get(), passw = password.get(): { get_user( user, passw), window.destroy() })
+    username_entry = tk.Entry(window)
+    password_entry = tk.Entry(window, show="*")  # Use show="*" to hide the password
+
+    username_entry.grid(row=0, column=1)
+    password_entry.grid(row=1, column=1)
+    submit = tk.Button(text = "sign in", command= submit_action )
     submit.grid(row = 2, column= 0, columnspan= 2, sticky = "NW")
-    
-    
-    if "User" in load_config(".mails"):
+        
+    if "User" in load_config("./.mails"):
         username = config["User"].get("Username", "Unknown")
         auto_signin = tk.Button(window, text=f"Sign in as {username}", command=lambda: window.destroy())
         auto_signin.grid(row = 0, column = 2)
@@ -380,7 +386,7 @@ def login_window(config):
     window.mainloop()     
 
 def get_user(username:str, password: str):
-    save_config(".mails",
+    save_config("./.mails",
                 {"User" :
                     {
                         "Username" : username,
